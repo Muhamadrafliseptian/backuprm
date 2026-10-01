@@ -14,12 +14,18 @@ DirectoryIndex index.php
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # 1. Blokir akses langsung ke folder sensitif & file .php internal
-    RewriteCond %{REQUEST_URI} ^/(backups|uploads|logs|database|\.git|\.svn)/ [NC,OR]
-    RewriteCond %{REQUEST_URI} ^/(pages|actions|core|config|bootstrap|layouts)/.*\.php$ [NC]
+    # 1. Blokir akses langsung ke folder internal & file PHP internal.
+    #    Semua URL harus lewat router, bukan file fisik.
+    #    Pakai %{THE_REQUEST} agar path relatif terhadap folder aplikasi,
+    #    sehingga tetap benar walau nama folder berubah.
+    RewriteCond %{THE_REQUEST} (?:^|\s)[^\s]*\?r= [NC]
+    RewriteRule ^ - [L]
+    RewriteCond %{THE_REQUEST} (?:^|\s)/rekam-medis/(?:backups|uploads|logs|database|\.git|\.svn)(?:/|\s|\?|$) [NC]
+    RewriteRule ^ - [F,L]
+    RewriteCond %{THE_REQUEST} (?:^|\s)/rekam-medis/(?:pages|actions|core|config|bootstrap|layouts)/.*\.php [NC]
     RewriteRule ^ - [F,L]
 
-    # 2. Pretty URL Routing standar
+    # 2. Pretty URL Routing -> index.php
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^(.*)$ index.php [QSA,L]

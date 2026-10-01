@@ -7,19 +7,43 @@
 declare(strict_types=1);
 
 // ---------- Load .env ----------
-$envFile = BASE_PATH . '/.env';
-if (file_exists($envFile)) {
+// Urutan pencarian:
+//   1. getenv('ENV_FILE')  (path absolut, diisi dari luar .env - misal
+//                          fastcgi_param ENV_FILE di nginx, atau pool
+//                          PHP-FPM. TIDAK bisa ditulis di dalam .env
+//                          karena file .env belum dimuat pada titik ini.)
+//   2. BASE_PATH/.env       (lokasi lama, tetap didukung)
+//   3. BASE_PATH/../.env    (satu level di atas webroot - paling aman)
+//
+// Kenapa mendukung lokasi luar webroot:
+//   Server produksi memakai nginx yang tidak bisa .htaccess. Kalau .env
+//   berada di dalam webroot, file password itu bisa saja terunduh lewat
+//   HTTP kalau rule nginx belum aktif. Simpan di luar webroot + permission
+//   640 root:www-data = tidak bisa dibaca visitor, tapi tetap bisa oleh PHP.
+$__envFromEnv = getenv('ENV_FILE');
+$__envCandidates = array_filter([
+    is_string($__envFromEnv) && $__envFromEnv !== '' ? $__envFromEnv : null,
+    BASE_PATH . '/.env',
+    BASE_PATH . '/../.env',
+]);
+
+foreach ($__envCandidates as $envFile) {
+    if (!file_exists($envFile) || !is_readable($envFile)) continue;
+
     foreach (file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
         $line = trim($line);
         if ($line === '' || str_starts_with($line, '#')) continue;
         if (!str_contains($line, '=')) continue;
         [$k, $v] = explode('=', $line, 2);
         $k = trim($k);
-        $v = trim($v, " \t\n\r\0\x0B\"'");
+        $v = trim($v, " \t\n
+\0\x0B\"'");
         $_ENV[$k] = $v;
         putenv("$k=$v");
     }
+    break; // pakai file pertama yang ditemukan
 }
+unset($__envCandidates, $envFile);
 
 function env(string $key, $default = null)
 {
