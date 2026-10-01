@@ -1,0 +1,303 @@
+/**
+ * file   : style.css
+ * path   : C:\xampp\htdocs\backuprm\assets\css\style.css
+ * fungsi : Custom CSS — Scrollbar, DataTables, Select2, NProgress, SweetAlert
+ *          Tema warna mint: #14b8a6 (teal-mint)
+ *          Font: Plus Jakarta Sans
+ */
+
+/* ============================= VARIABEL ============================= */
+:root {
+    /* Warna Mint Baru (#14b8a6 — teal) */
+    --mint:        #14b8a6;
+    --mint-dark:   #0d9488;
+    --mint-deep:   #0f766e;
+    --mint-bg:     #f0fdf9;
+    --mint-glow:   rgba(20,184,166,.12);
+
+    /* Warna pendukung */
+    --danger:      #E63946;
+    --warning:     #F2B84B;
+    --info:        #2B7EA8;
+    --success:     #14b8a6;
+    --text:        #1e293b;
+    --muted:       #94a3b8;
+    --border:      #e2e8f0;
+
+    /* Transition */
+    --ease-smooth: cubic-bezier(.4, 0, .2, 1);
+    --dur-fast:    .18s;
+    --dur-med:     .28s;
+}
+
+/* ============================= SCROLLBAR ============================= */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #f8fafc; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: #14b8a6; }
+
+/* ============================= NPROGRESS ============================= */
+#nprogress .bar {
+    background: #14b8a6 !important;
+    height: 3px !important;
+}
+#nprogress .peg {
+    box-shadow: 0 0 10px #14b8a6, 0 0 5px #14b8a6 !important;
+}
+#nprogress .spinner { display: none !important; }
+
+/* ============================= DATATABLES ============================= */
+.dataTables_wrapper {
+    font-size: 13px;
+}
+.dataTables_wrapper .dataTables_length select,
+.dataTables_wrapper .dataTables_filter input {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 6px 12px;
+    font-size: 13px;
+    transition: all var(--dur-fast);
+}
+.dataTables_wrapper .dataTables_filter input:focus {
+    border-color: #14b8a6;
+    box-shadow: 0 0 0 3px var(--mint-glow);
+    outline: none;
+    background: #fff;
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    border-radius: 8px !important;
+    padding: 6px 12px !important;
+    margin: 0 2px !important;
+    border: 1px solid #e2e8f0 !important;
+    background: #fff !important;
+    color: #475569 !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+    background: #f0fdf9 !important;
+    border-color: #14b8a6 !important;
+    color: #0f766e !important;
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button.current {
+    background: #14b8a6 !important;
+    border-color: #14b8a6 !important;
+    color: #fff !important;
+}
+.dataTables_wrapper .dataTables_info {
+    font-size: 12px;
+    color: #64748b;
+    padding-top: 12px !important;
+}
+
+/* ============================= SELECT2 ============================= */
+.select2-container--default .select2-selection--single {
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 10px !important;
+    height: 42px !important;
+    padding: 6px 10px !important;
+}
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 28px !important;
+    color: #1e293b !important;
+    font-size: 13px !important;
+}
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 40px !important;
+}
+.select2-container--default.select2-container--focus .select2-selection--single,
+.select2-container--default.select2-container--open .select2-selection--single {
+    border-color: #14b8a6 !important;
+    box-shadow: 0 0 0 3px var(--mint-glow) !important;
+    background: #fff !important;
+}
+.select2-results__option--highlighted {
+    background: #14b8a6 !important;
+    color: #fff !important;
+}
+.select2-results__option--selected {
+    background: #f0fdf9 !important;
+    color: #0f766e !important;
+}
+.select2-dropdown {
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 10px !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,.08) !important;
+}
+
+/* ============================= SWEETALERT2 ============================= */
+.swal2-popup {
+    border-radius: 16px !important;
+    font-family: 'Plus Jakarta Sans', 'Inter', sans-serif !important;
+}
+.swal2-title {
+    font-size: 18px !important;
+    font-weight: 700 !important;
+    color: #1e293b !important;
+}
+.swal2-html-container {
+    font-size: 13px !important;
+    color: #64748b !important;
+}
+
+/* ============================= ANIMASI ============================= */
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in-up {
+    animation: fadeInUp .35s cubic-bezier(.2,.8,.2,1) forwards;
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to   { transform: translateX(0); opacity: 1; }
+}
+.toast-enter {
+    animation: slideInRight .3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ============================= PRINT ============================= */
+@media print {
+    aside, header, footer, #mobileBackdrop { display: none !important; }
+    main { padding: 0 !important; overflow: visible !important; }
+}
+
+/* ============================= PRINT — RESUME MEDIS ============================= */
+@media print {
+    @page {
+        size: A4 portrait;
+        margin: 12mm 10mm 15mm 10mm;
+    }
+
+    html, body {
+        background: #fff !important;
+        color: #000 !important;
+        font-family: Arial, Helvetica, sans-serif !important;
+        font-size: 10pt !important;
+        line-height: 1.35 !important;
+    }
+
+    /* ---------- Sembunyikan elemen non-cetak ---------- */
+    aside, header, footer, nav, #mobileBackdrop,
+    .no-print, [data-no-print] {
+        display: none !important;
+    }
+
+    /* Sembunyikan statistik dashboard & tombol */
+    .no-print-block {
+        display: none !important;
+    }
+
+    /* ---------- Layout jadi block ---------- */
+    main {
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: visible !important;
+        background: #fff !important;
+    }
+    .flex.h-screen,
+    .flex-1.flex.flex-col {
+        display: block !important;
+        height: auto !important;
+        overflow: visible !important;
+    }
+
+    /* ---------- Reset card ---------- */
+    .bg-white, .rounded-2xl, .shadow-sm, .shadow-md, .rounded-xl {
+        background: #fff !important;
+        border: none !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+    }
+
+    /* ---------- Warna ---------- */
+    * {
+        color: #000 !important;
+        background-image: none !important;
+    }
+
+    /* ---------- Grid jadi block untuk stack rapi ---------- */
+    .grid {
+        display: block !important;
+    }
+
+    /* ---------- Timeline: card kunjungan ---------- */
+    .timeline-item {
+        page-break-inside: avoid;
+        margin-bottom: 8pt !important;
+        border: 1px solid #333 !important;
+        padding: 6pt 8pt !important;
+    }
+
+    /* ---------- Sembunyikan timeline dot & border ---------- */
+    .timeline-line, .timeline-dot {
+        display: none !important;
+    }
+
+    /* ---------- Font header ---------- */
+    h1, h2, h3, h4 {
+        color: #000 !important;
+        font-weight: 700 !important;
+        margin: 0 0 4pt 0 !important;
+    }
+    h1 { font-size: 14pt !important; }
+    h2 { font-size: 13pt !important; }
+    h3 { font-size: 11pt !important; }
+    h4 { font-size: 10pt !important; }
+
+    /* ---------- Tabel ---------- */
+    table {
+        border-collapse: collapse !important;
+        width: 100% !important;
+        font-size: 9pt !important;
+    }
+    table th, table td {
+        border: 1px solid #666 !important;
+        padding: 2pt 4pt !important;
+        color: #000 !important;
+    }
+    table thead th {
+        background: #e0e0e0 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    /* ---------- Link ---------- */
+    a {
+        color: #000 !important;
+        text-decoration: none !important;
+    }
+
+    /* ---------- Hilangkan overflow scroll ---------- */
+    .overflow-x-auto, .overflow-y-auto {
+        overflow: visible !important;
+    }
+
+    /* ---------- Page break helper ---------- */
+    .page-break {
+        page-break-after: always;
+    }
+    .avoid-break {
+        page-break-inside: avoid;
+    }
+
+    /* ---------- Print only ---------- */
+    .print-only {
+        display: block !important;
+    }
+    .screen-only {
+        display: none !important;
+    }
+}
+
+/* Screen: sembunyikan elemen khusus print */
+@media screen {
+    .print-only {
+        display: none !important;
+    }
+}
+

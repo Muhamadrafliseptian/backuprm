@@ -1,0 +1,26 @@
+[2026-09-30 14:27:09] [::1] [8813084] [INFO] clear_log | Semua log dibersihkan (17 baris, error.log: tidak) oleh 8813084
+[2026-09-30 14:29:22] [::1] [8813084] [INFO] login | Berhasil login: 8813084
+[2026-09-30 14:36:21] [::1] [8813084] [INFO] upload_sql | Upload backup_rajal_dinkes_2026_2026-09-01_sampai_2026-09-01.sql: mode=replace, 2962 baris, batch=BATCH-20260930-143621-658166, file_hash=07666800fa3a..., raw_hash=07666800fa3a...
+[2026-09-30 14:37:08] [::1] [8813084] [INFO] preview_data | Preview: {"raw_rows":2962,"m_pasien":2621,"t_kunjungan":2218,"t_pemeriksaan":1099,"t_diagnosis":1383,"t_tindakan":83,"m_tenaga_kesehatan":72,"t_resep":667,"d_resep_detail":2163,"m_obat":107,"t_laboratorium":532,"skipped":0}
+[2026-09-30 14:43:33] [::1] [8813084] [INFO] login | Berhasil login: 8813084
+[2026-09-30 14:43:37] [::1] [8813084] [INFO] simpan_hasil | Sukses: {"m_pasien":2621,"t_kunjungan":2218,"t_pemeriksaan":1099,"t_diagnosis":1383,"t_tindakan":83,"m_tenaga_kesehatan":72,"t_resep":667,"d_resep_detail":2163,"m_obat":107,"t_laboratorium":532} | result_hash=526c38385759...
+[2026-09-30 14:45:41] [::1] [8813084] [INFO] preview_data | Preview: {"raw_rows":2962,"m_pasien":2621,"t_kunjungan":2218,"t_pemeriksaan":1099,"t_diagnosis":1383,"t_tindakan":83,"m_tenaga_kesehatan":72,"t_resep":667,"d_resep_detail":2163,"m_obat":107,"t_laboratorium":532,"skipped":0}
+[2026-09-30 14:45:49] [::1] [8813084] [INFO] simpan_hasil | Sukses: {"m_pasien":0,"t_kunjungan":0,"t_pemeriksaan":0,"t_diagnosis":0,"t_tindakan":0,"m_tenaga_kesehatan":0,"t_resep":0,"d_resep_detail":0,"m_obat":0,"t_laboratorium":0} | result_hash=526c38385759...
+[2026-09-30 14:46:58] [::1] [8813084] [INFO] preview_data | Preview: {"raw_rows":2962,"m_pasien":2621,"t_kunjungan":2218,"t_pemeriksaan":1099,"t_diagnosis":1383,"t_tindakan":83,"m_tenaga_kesehatan":72,"t_resep":667,"d_resep_detail":2163,"m_obat":107,"t_laboratorium":532,"skipped":0}
+[2026-09-30 14:47:59] [::1] [8813084] [INFO] login | Berhasil login: 8813084
+[2026-09-30 14:47:59] [::1] [8813084] [INFO] reset_data | Reset 10 tabel normalisasi (s_backup_raw dipertahankan)
+[2026-09-30 14:48:03] [::1] [8813084] [INFO] simpan_hasil | Sukses: {"m_pasien":2621,"t_kunjungan":2218,"t_pemeriksaan":1099,"t_diagnosis":1383,"t_tindakan":83,"m_tenaga_kesehatan":72,"t_resep":667,"d_resep_detail":2163,"m_obat":107,"t_laboratorium":532} | result_hash=cdfc14164b3f...
+[2026-09-30 14:49:38] [::1] [8813084] [INFO] login | Berhasil login: 8813084
+[2026-09-30 14:50:12] [::1] [8813084] [INFO] login | Berhasil login: 8813084
+[2026-09-30 14:50:24] [::1] [8813084] [INFO] login | Berhasil login: 8813084
+[2026-09-30 14:50:24] [::1] [8813084] [INFO] verify_batch | Batch BATCH-20260930-143621-658166 diverifikasi MATCH oleh 8813084
+[2026-09-30 14:50:24] [::1] [8813084] [INFO] verify_batch | Batch BATCH-20260930-143621-658166 diverifikasi MATCH oleh 8813084
+[2026-09-30 14:50:24] [::1] [8813084] [INFO] verify_batch | Batch BATCH-20260930-143621-658166 diverifikasi MATCH oleh 8813084
+[2026-09-30 14:53:36] [::1] [8813084] [INFO] preview_data | Preview: {"raw_rows":2962,"m_pasien":2621,"t_kunjungan":2218,"t_pemeriksaan":1099,"t_diagnosis":1383,"t_tindakan":83,"m_tenaga_kesehatan":72,"t_resep":667,"d_resep_detail":2163,"m_obat":107,"t_laboratorium":532,"skipped":0}
+[2026-09-30 14:53:50] [::1] [8813084] [INFO] upload_sql | Upload backup_rajal_dinkes_2026_2026-08-01_sampai_2026-08-01.sql: mode=append, 608 baris, batch=BATCH-20260930-145349-85cf23, file_hash=bac550494c1b..., raw_hash=bac550494c1b...
+[2026-09-30 14:53:58] [::1] [8813084] [INFO] preview_data | Preview: {"raw_rows":3570,"m_pasien":3166,"t_kunjungan":2716,"t_pemeriksaan":1537,"t_diagnosis":1977,"t_tindakan":96,"m_tenaga_kesehatan":73,"t_resep":1053,"d_resep_detail":3525,"m_obat":133,"t_laboratorium":625,"skipped":0}
+[2026-09-30 14:54:12] [::1] [8813084] [INFO] simpan_hasil | Sukses: {"m_pasien":545,"t_kunjungan":498,"t_pemeriksaan":438,"t_diagnosis":594,"t_tindakan":13,"m_tenaga_kesehatan":1,"t_resep":386,"d_resep_detail":1362,"m_obat":24,"t_laboratorium":93} | result_hash=7c73f26e1f50...
+[2026-09-30 14:55:46] [::1] [8813084] [INFO] verify_batch | Batch BATCH-20260930-145349-85cf23 diverifikasi MATCH oleh 8813084
+[2026-09-30 14:55:55] [::1] [8813084] [INFO] clear_backup | Kosongkan s_backup_raw (3570 baris dihapus)
+[2026-10-01 08:41:49] [::1] [8813084] [INFO] login | Berhasil login: 8813084
+[2026-10-01 08:43:05] [::1] [8813084] [INFO] login | Berhasil login: 8813084
