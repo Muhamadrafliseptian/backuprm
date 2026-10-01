@@ -12,6 +12,8 @@
  */
 declare(strict_types=1);
 
+require_once __DIR__ . '/../bootstrap/internal_guard.php';
+
 function session_start_safe(): void
 {
     if (session_status() === PHP_SESSION_ACTIVE) return;

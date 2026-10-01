@@ -6,6 +6,8 @@
  */
 declare(strict_types=1);
 
+require_once __DIR__ . '/internal_guard.php';
+
 if (!empty($_SERVER['ACTION_FILE'])) {
     if (file_exists($_SERVER['ACTION_FILE'])) {
         require_once $_SERVER['ACTION_FILE'];

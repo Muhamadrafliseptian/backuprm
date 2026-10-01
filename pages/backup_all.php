@@ -7,6 +7,8 @@
  */
 declare(strict_types=1);
 
+require_once __DIR__ . '/../bootstrap/internal_guard.php';
+
 require BASE_PATH . '/layouts/header.php';
 require BASE_PATH . '/layouts/sidebar.php';
 

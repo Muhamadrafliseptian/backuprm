@@ -6,6 +6,8 @@
  */
 declare(strict_types=1);
 
+require_once __DIR__ . '/../bootstrap/internal_guard.php';
+
 $currentRole = auth_role() ?: 'guest';
 $requiredRole = ROLE_ADMIN;
 ?>

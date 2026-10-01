@@ -6,25 +6,17 @@
  */
 declare(strict_types=1);
 
+require_once __DIR__ . '/internal_guard.php';
+
 // 1. Ambil ROUTE_PATH dari query string ?r= atau dari server
 if (!empty($_GET['r'])) {
     $_SERVER['ROUTE_PATH'] = trim($_GET['r'], '/');
 }
 
-$routes_action = [
-    'login'            => 'proses_login.php',
-    'logout'           => 'proses_logout.php',
-    'ping'             => 'proses_ping.php',
-    'clear-log'        => 'proses_clear_log.php',
-    'upload-sql'       => 'proses_upload_sql.php',
-    'preview-data'     => 'proses_preview_data.php',
-    'simpan-hasil'     => 'proses_simpan_hasil.php',
-    'clear-backup'     => 'proses_clear_backup.php',
-    'reset-data'       => 'proses_reset_data.php',
-    'reset-all'        => 'proses_reset_all.php',
-    'mark-verified'    => 'proses_mark_verified.php',
-    'download-backup'  => 'proses_download_backup.php',
-];
+// Peta action -> file di actions/.
+// Sumber tunggal: bootstrap/action_map.php (dipakai juga oleh route.php
+// dan tools/generate-stubs.php, sehingga stub dan router tidak bisa beda).
+$routes_action = require BASE_PATH . '/bootstrap/action_map.php';
 
 $_SERVER['ACTION_FILE'] = null;
 

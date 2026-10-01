@@ -6,6 +6,8 @@
  */
 declare(strict_types=1);
 
+require_once __DIR__ . '/../bootstrap/internal_guard.php';
+
 function base_url(string $path = ''): string
 {
     return BASE_URL . '/' . ltrim($path, '/');
@@ -18,17 +20,68 @@ function asset(string $path): string
 
 function redirect(string $path): void
 {
-    // Deteksi apakah routing pretty URL tersedia.
-    // Kalau tidak (mis. tanpa .htaccess / tanpa rewrite di nginx), pakai
-    // query string ?r= yang sudah didukung bootstrap/routes.php. Kalau tidak
-    // ikut ditangani, user akan diarahkan ke URL yang 404 setelah login.
-    $target = base_url($path);
-    if (!pretty_url_enabled() && $path !== '') {
-        $target = BASE_URL . '/index.php?r=' . rawurlencode(ltrim($path, '/'));
-    }
+    // Ada 3 mode routing, dipilih otomatis:
+    //   1. stub     : /dashboard.php          (tanpa rewrite, tanpa .htaccess)
+    //   2. pretty   : /dashboard              (.htaccess / try_files)
+    //   3. query    : /index.php?r=dashboard  (fallback paling universal)
+    $target = match (true) {
+        stub_url_enabled()   => stub_url($path),
+        pretty_url_enabled() => base_url($path),
+        default              => BASE_URL . '/index.php?r=' . rawurlencode(ltrim($path, '/')),
+    };
 
     header('Location: ' . $target);
     exit;
+}
+
+/**
+ * Bangun URL ke stub .php: 'dashboard' -> '/rekam-medis/dashboard.php'
+ */
+function stub_url(string $path): string
+{
+    $path = ltrim($path, '/');
+
+    // Sudah berupa stub (.php) atau query string -> pakai apa adanya
+    if (str_ends_with($path, '.php') || str_contains($path, '?')) {
+        return base_url($path);
+    }
+
+    // Path 'actions/xyz' dibuang prefiksnya: stub action bernamanya
+    // 'xyz.php' di dalam folder actions/, bukan 'actions/xyz.php' di root.
+    if (str_starts_with($path, 'actions/')) {
+        $path = substr($path, strlen('actions/'));
+        return BASE_URL . '/actions/' . $path . '.php';
+    }
+
+    return base_url($path . '.php');
+}
+
+/**
+ * Apakah mode stub .php yang dipakai?
+ *
+ * Stub .php adalah cara paling universal: tidak butuh .htaccess,
+ * tidak butuh rewrite nginx, tidak butuh query string.
+ * Dipakai kalau request masuk lewat file .php di root atau actions/.
+ *
+ * Override lewat .env: ROUTING_MODE=stub|pretty|query
+ */
+function stub_url_enabled(): bool
+{
+    static $cached = null;
+    if ($cached !== null) {
+        return $cached;
+    }
+
+    $mode = strtolower((string)(getenv('ROUTING_MODE') ?: ''));
+    if ($mode === 'stub')   { $cached = true;  return true; }
+    if ($mode === 'pretty') { $cached = false; return false; }
+    if ($mode === 'query')  { $cached = false; return false; }
+
+    $script = (string)($_SERVER['SCRIPT_NAME'] ?? '');
+    $cached = str_ends_with($script, '.php')
+        && !str_ends_with($script, '/index.php');
+
+    return $cached;
 }
 
 /**

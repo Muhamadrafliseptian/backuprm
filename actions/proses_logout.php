@@ -6,6 +6,8 @@
  */
 declare(strict_types=1);
 
+require_once __DIR__ . '/../bootstrap/internal_guard.php';
+
 /* Hanya terima POST */
 if (!is_post()) {
     if (is_ajax()) {

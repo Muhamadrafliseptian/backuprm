@@ -6,6 +6,8 @@
  */
 declare(strict_types=1);
 
+require_once __DIR__ . '/internal_guard.php';
+
 foreach ([PATH_BACKUPS, PATH_LOGS, PATH_UPLOADS] as $dir) {
     if (!is_dir($dir)) @mkdir($dir, 0755, true);
 }

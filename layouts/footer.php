@@ -5,6 +5,8 @@
  * fungsi : Penutup layout + JS library + helper + session timeout sinkron
  */
 declare(strict_types=1);
+
+require_once __DIR__ . '/../bootstrap/internal_guard.php';
 ?>
     </main>
 </div><!-- /main-area -->

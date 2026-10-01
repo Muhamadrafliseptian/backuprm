@@ -6,6 +6,8 @@
  *          Struktur: Utama → Alur Kerja → Data → Sistem
  */
 declare(strict_types=1);
+
+require_once __DIR__ . '/../bootstrap/internal_guard.php';
 $__u = auth_user();
 $__page = $_SERVER['ROUTE_PATH'] ?? 'dashboard';
 

@@ -6,6 +6,8 @@
  */
 declare(strict_types=1);
 
+require_once __DIR__ . '/internal_guard.php';
+
 // ---------- Load .env ----------
 // Urutan pencarian:
 //   1. getenv('ENV_FILE')  (path absolut, diisi dari luar .env - misal
@@ -81,6 +83,14 @@ if (!defined('BASE_URL')) {
 
         $script = $_SERVER['SCRIPT_NAME'] ?? ($_SERVER['PHP_SELF'] ?? '/index.php');
         $dir    = rtrim(str_replace('\\', '/', dirname($script)), '/');
+
+        // Kalau request masuk lewat folder actions/ (stub .php),
+        // BASE_URL harus tetap menunjuk ke root aplikasi, bukan ke /actions.
+        // Tanpa ini BASE_URL jadi ".../rekam-medis/actions" dan semua link
+        // ke aset serta redirect akan salah.
+        if ($dir !== '' && basename($dir) === 'actions') {
+            $dir = rtrim(str_replace('\\', '/', dirname($dir)), '/');
+        }
 
         // Tanpa trailing slash: base_url() sudah menambah '/' sendiri,
         // kalau tidak akan jadi URL ganda seperti /rekam-medis//dashboard

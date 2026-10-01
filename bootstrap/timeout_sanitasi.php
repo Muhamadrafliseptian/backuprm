@@ -6,5 +6,7 @@
  */
 declare(strict_types=1);
 
+require_once __DIR__ . '/internal_guard.php';
+
 $_GET  = array_map('trim', $_GET  ?? []);
 $_POST = array_map('trim', $_POST ?? []);

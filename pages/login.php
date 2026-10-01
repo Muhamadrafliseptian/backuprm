@@ -5,6 +5,8 @@
  * fungsi : Halaman login dengan konsep glass + Plus Jakarta Sans
  */
 declare(strict_types=1);
+
+require_once __DIR__ . '/../bootstrap/internal_guard.php';
 $err = flash('error');
 $suc = flash('success');
 

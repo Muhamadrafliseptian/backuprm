@@ -6,6 +6,8 @@
  */
 declare(strict_types=1);
 
+require_once __DIR__ . '/internal_guard.php';
+
 // Kalau ini action, sudah dieksekusi di post_action.php → stop
 if (!empty($_SERVER['ACTION_FILE'])) {
     return;

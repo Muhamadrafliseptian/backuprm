@@ -6,6 +6,8 @@
  */
 declare(strict_types=1);
 
+require_once __DIR__ . '/../bootstrap/internal_guard.php';
+
 require_once BASE_PATH . '/core/hash_helper.php';
 
 csrf_check_or_die();

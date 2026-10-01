@@ -5,6 +5,8 @@
  * fungsi : Halaman error 404 dengan konsep glass + big number + shortcut links
  */
 declare(strict_types=1);
+
+require_once __DIR__ . '/../bootstrap/internal_guard.php';
 ?>
 <!DOCTYPE html>
 <html lang="id" class="h-full">

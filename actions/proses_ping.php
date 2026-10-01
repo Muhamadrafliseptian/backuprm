@@ -7,6 +7,8 @@
  */
 declare(strict_types=1);
 
+require_once __DIR__ . '/../bootstrap/internal_guard.php';
+
 /* ---------- Cek session expired ---------- */
 if (!auth_check()) {
     // Kalau session expired, beri tahu client supaya redirect

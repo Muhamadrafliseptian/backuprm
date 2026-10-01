@@ -6,6 +6,8 @@
  */
 declare(strict_types=1);
 
+require_once __DIR__ . '/../bootstrap/internal_guard.php';
+
 define('APP_NAME',    env('APP_NAME', 'Backup RM'));
 define('APP_VERSION', '1.0.0');
 

@@ -5,6 +5,8 @@
  * fungsi : Head + Tailwind + Remixicon + Chart.js
  */
 declare(strict_types=1);
+
+require_once __DIR__ . '/../bootstrap/internal_guard.php';
 $__user = auth_user();
 $__page = $_SERVER['ROUTE_PATH'] ?? 'dashboard';
 ?>
