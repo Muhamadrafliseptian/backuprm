@@ -156,13 +156,13 @@ if (!empty($pasien['tanggal_lahir'])) {
                     Pemerintah Provinsi DKI Jakarta
                 </div>
                 <div style="font-size:13pt;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-top:2px">
-                    Puskesmas Setiabudi
+                    Puskesmas Kebon Jeruk
                 </div>
                 <div style="font-size:9pt;margin-top:2px">
-                    Jl. Setiabudi Raya No. 1, Jakarta Selatan 12910
+                    Jl. Kebon Jeruk
                 </div>
                 <div style="font-size:9pt">
-                    Telp. (021) 1234567 | Email: puskesmas.setiabudi@jakarta.go.id
+                    Telp. (021) 1234567 | Email: puskesmas.keckebonjeruk@jakarta.go.id
                 </div>
             </td>
         </tr>

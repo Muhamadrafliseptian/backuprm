@@ -58,7 +58,7 @@ if (!function_exists('nav_icon_multi')) {
                 </div>
                 <div>
                     <h1 class="font-bold text-slate-900 text-sm leading-tight tracking-tight"><?= e(APP_NAME) ?></h1>
-                    <p class="text-[11px] text-mint-600 font-medium">Puskesmas Setiabudi</p>
+                    <p class="text-[11px] text-mint-600 font-medium">Puskesmas Kebon Jeruk</p>
                 </div>
             </div>
             <button onclick="toggleSidebar()" class="md:hidden text-slate-400 hover:text-slate-600">
