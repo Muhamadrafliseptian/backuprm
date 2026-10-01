@@ -1,9 +1,28 @@
 DirectoryIndex index.php
 
+# ---------- Proteksi file sensitif ----------
+<FilesMatch "^(\.env|\.env\..*|.*\.(sql|log|md|ini|sh|yml|yaml|bak|old)|composer\.(json|lock))$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteBase /backup-rm/
 
+    # Blokir akses ke folder internal (backups, uploads, logs, database, .git)
+    RewriteRule ^(?:backups|uploads|logs|database|\.git|\.svn)(?:/|$) - [R=404,L]
+
+    # Hanya index.php yang boleh dipanggil langsung; pages/, actions/, core/,
+    # config/, bootstrap/, layouts/ harus lewat router (/login, /actions/upload-sql, dll)
+    RewriteRule ^(?:pages|actions|core|config|bootstrap|layouts)/.*\.php$ - [R=404,L]
+
+    # Routing pretty URL
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^(.*)$ index.php [QSA,L]

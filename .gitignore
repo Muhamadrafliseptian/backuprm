@@ -1,0 +1,27 @@
+# ---------- Kredensial (JANGAN pernah commit) ----------
+.env
+*.env
+.env.*
+!.env.example
+
+# ---------- Data runtime ----------
+backups/*
+!backups/.gitkeep
+uploads/*
+!uploads/.gitkeep
+database/*
+!database/.gitkeep
+logs/*.log
+
+# ---------- File sensitif lain ----------
+*.sql
+!db_backuprm.sql.example
+db_backuprm.sql
+
+# ---------- OS / editor ----------
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
