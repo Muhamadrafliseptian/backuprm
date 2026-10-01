@@ -62,6 +62,7 @@ $rows = $stmt->fetchAll();
 <!-- Filter -->
 <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
     <form method="get" action="<?= base_url('laboratorium') ?>" class="flex flex-col sm:flex-row gap-3">
+    <input type="hidden" name="r" value="laboratorium">
         <div class="flex-1 relative">
             <i class="ri-search-2-line absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
             <input type="text" name="q" value="<?= e($q) ?>" placeholder="Nama / No RM / No Transaksi"

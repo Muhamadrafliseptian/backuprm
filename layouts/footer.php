@@ -27,14 +27,32 @@ require_once __DIR__ . '/../bootstrap/internal_guard.php';
     window.CSRF_TOKEN       = "<?= csrf_token() ?>";
     window.APP_NAME         = "<?= e(APP_NAME) ?>";
     window.SESSION_LIFETIME = <?= (int) SESSION_LIFETIME ?>;
-    window.PRETTY_URL       = <?= pretty_url_enabled() ? 'true' : 'false' ?>;
+    window.ROUTING_MODE      = "<?= e(routing_mode()) ?>";
 
-    // Pembuat URL aman untuk AJAX/redirect.
-    // Kalau pretty URL tidak tersedia (tanpa .htaccess / tanpa rewrite nginx),
-    // route harus lewat index.php?r=... supaya tidak 404.
+    // Pembuat URL untuk AJAX & redirect.
+    // Mode stub  : /dashboard.php          (tanpa .htaccess / tanpa rewrite)
+    // Mode pretty: /dashboard              (.htaccess / try_files)
+    // Mode query : /index.php?r=dashboard
     window.u = function (path) {
         path = String(path || '').replace(/^\/+/, '');
-        if (window.PRETTY_URL) return window.BASE_URL + '/' + path;
+
+        // Sudah query string atau .php -> pakai apa adanya
+        if (path.indexOf('?') !== -1 || /\.php$/.test(path)) {
+            return window.BASE_URL + '/' + path;
+        }
+
+        if (window.ROUTING_MODE === 'stub') {
+            if (path.indexOf('actions/') === 0) {
+                var name = path.slice('actions/'.length);
+                return window.BASE_URL + '/actions/' + name + '.php';
+            }
+            return window.BASE_URL + '/' + path + '.php';
+        }
+
+        if (window.ROUTING_MODE === 'pretty') {
+            return window.BASE_URL + '/' + path;
+        }
+
         var sep = path.indexOf('?') === -1 ? '?' : '&';
         return window.BASE_URL + '/index.php' + sep + 'r=' + encodeURIComponent(path);
     };

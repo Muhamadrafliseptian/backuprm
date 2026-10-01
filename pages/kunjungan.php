@@ -111,6 +111,7 @@ $qsBase = $qsArr ? '&' . http_build_query($qsArr) : '';
 <!-- Filter -->
 <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
     <form method="get" action="<?= base_url('kunjungan') ?>" class="grid grid-cols-1 md:grid-cols-4 gap-3">
+    <input type="hidden" name="r" value="kunjungan">
         <div class="relative md:col-span-2">
             <i class="ri-search-2-line absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
             <input type="text" name="q" value="<?= e($q) ?>" placeholder="No transaksi / Nama / No RM"

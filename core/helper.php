@@ -20,23 +20,25 @@ function base_url(string $path = ''): string
         return BASE_URL . '/' . $path;
     }
 
-    // Ikuti mode routing yang aktif:
-    //   stub   -> /dashboard.php   (tanpa rewrite)
-    //   pretty -> /dashboard       (.htaccess / try_files)
-    //   query  -> /index.php?r=dashboard
-    if (str_contains($path, '?') || str_ends_with($path, '.php')) {
-        return BASE_URL . '/' . $path;
+    // Pisahkan nama route dari query string-nya.
+    // Contoh: 'kunjungan?q=abc&page=2' -> route 'kunjungan', qs '?q=abc&page=2'
+    $qmark = strpos($path, '?');
+    $route = $qmark === false ? $path : substr($path, 0, $qmark);
+    $query = $qmark === false ? '' : substr($path, $qmark);
+
+    // Sudah berupa nama file .php -> pakai apa adanya
+    if (str_ends_with($route, '.php')) {
+        return BASE_URL . '/' . $route . $query;
     }
 
-    if (stub_url_enabled()) {
-        return stub_url($path);
-    }
+    // Bangun URL route sesuai mode, lalu tempelkan query string
+    $url = match (routing_mode()) {
+        'stub'   => stub_url($route) . $query,
+        'pretty' => BASE_URL . '/' . $route . $query,
+        default  => query_url($path),
+    };
 
-    if (pretty_url_enabled()) {
-        return BASE_URL . '/' . $path;
-    }
-
-    return BASE_URL . '/index.php?r=' . rawurlencode($path);
+    return $url;
 }
 
 function asset(string $path): string
@@ -46,18 +48,41 @@ function asset(string $path): string
 
 function redirect(string $path): void
 {
-    // Ada 3 mode routing, dipilih otomatis:
-    //   1. stub     : /dashboard.php          (tanpa rewrite, tanpa .htaccess)
-    //   2. pretty   : /dashboard              (.htaccess / try_files)
-    //   3. query    : /index.php?r=dashboard  (fallback paling universal)
-    $target = match (true) {
-        stub_url_enabled()   => stub_url($path),
-        pretty_url_enabled() => base_url($path),
-        default              => BASE_URL . '/index.php?r=' . rawurlencode(ltrim($path, '/')),
+    // Bentuk URL mengikuti mode routing yang aktif:
+    //   stub   -> /dashboard.php          (tanpa rewrite, tanpa .htaccess)
+    //   pretty -> /dashboard              (.htaccess / try_files)
+    //   query  -> /index.php?r=dashboard  (paling universal)
+    $target = match (routing_mode()) {
+        'stub'   => stub_url($path),
+        'pretty' => base_url($path),
+        default  => query_url($path),
     };
 
     header('Location: ' . $target);
     exit;
+}
+
+/**
+ * Bangun URL query-string: 'kunjungan?q=abc' -> '.../index.php?r=kunjungan&q=abc'
+ *
+ * Parameter r harus jadi parameter PERTAMA supaya route terbaca benar,
+ * lalu parameter asli menyusul.
+ */
+function query_url(string $path): string
+{
+    $path = ltrim($path, '/');
+
+    $qmark = strpos($path, '?');
+    $route = $qmark === false ? $path : substr($path, 0, $qmark);
+    $query = $qmark === false ? '' : substr($path, $qmark);
+
+    if (str_ends_with($route, '.php')) {
+        return BASE_URL . '/' . $route . $query;
+    }
+
+    // r= dulu, lalu '&' + query string asli
+    return BASE_URL . '/index.php?r=' . rawurlencode($route)
+        . ($query !== '' ? '&' . substr($query, 1) : '');
 }
 
 /**
@@ -69,70 +94,53 @@ function stub_url(string $path): string
 
     // Sudah berupa stub (.php) atau query string -> pakai apa adanya
     if (str_ends_with($path, '.php') || str_contains($path, '?')) {
-        return base_url($path);
+        return BASE_URL . '/' . $path;
     }
 
     // Path 'actions/xyz' dibuang prefiksnya: stub action bernamanya
     // 'xyz.php' di dalam folder actions/, bukan 'actions/xyz.php' di root.
     if (str_starts_with($path, 'actions/')) {
-        $path = substr($path, strlen('actions/'));
-        return BASE_URL . '/actions/' . $path . '.php';
+        $name = substr($path, strlen('actions/'));
+        return BASE_URL . '/actions/' . $name . '.php';
     }
 
-    return base_url($path . '.php');
+    return BASE_URL . '/' . $path . '.php';
 }
 
 /**
- * Apakah mode stub .php yang dipakai?
+ * Mode routing yang aktif: stub / pretty / query
  *
- * Stub .php adalah cara paling universal: tidak butuh .htaccess,
- * tidak butuh rewrite nginx, tidak butuh query string.
- * Dipakai kalau request masuk lewat file .php di root atau actions/.
+ * Menentukan bentuk URL yang dipakai redirect(), base_url(), dan window.u() di JS.
+ * Deteksi otomatis:
+ *   - SCRIPT_NAME berakhir index.php  -> query (?r=)
+ *   - SCRIPT_NAME file stub .php      -> stub (/dashboard.php)
+ *   - selain itu                      -> pretty (/dashboard)
  *
  * Override lewat .env: ROUTING_MODE=stub|pretty|query
  */
-function stub_url_enabled(): bool
+function routing_mode(): string
 {
     static $cached = null;
     if ($cached !== null) {
         return $cached;
     }
 
-    $mode = strtolower((string)(getenv('ROUTING_MODE') ?: ''));
-    if ($mode === 'stub')   { $cached = true;  return true; }
-    if ($mode === 'pretty') { $cached = false; return false; }
-    if ($mode === 'query')  { $cached = false; return false; }
+    $forced = strtolower((string)(getenv('ROUTING_MODE') ?: ''));
+    if (in_array($forced, ['stub', 'pretty', 'query'], true)) {
+        $cached = $forced;
+        return $cached;
+    }
 
     $script = (string)($_SERVER['SCRIPT_NAME'] ?? '');
-    $cached = str_ends_with($script, '.php')
-        && !str_ends_with($script, '/index.php');
+    if (str_ends_with($script, '/index.php')) {
+        $cached = 'query';
+    } elseif (str_ends_with($script, '.php')) {
+        $cached = 'stub';
+    } else {
+        $cached = 'pretty';
+    }
 
     return $cached;
-}
-
-/**
- * Apakah pretty URL (/dashboard) tersedia?
- *
- * Pretty URL butuh rewrite: .htaccess (Apache) atau try_files (nginx).
- * Kalau keduanya tidak ada, route harus lewat ?r=.
- *
- * Cara deteksi: kalau SCRIPT_NAME berakhiran index.php, kemungkinan besar
- * request datang lewat ?r= (bukan pretty URL), jadi pretty URL tidak dipakai.
- */
-function pretty_url_enabled(): bool
-{
-    $script = (string)($_SERVER['SCRIPT_NAME'] ?? '');
-
-    // .env: PRETTY_URL=off untuk memaksa ?r= di server tanpa rewrite
-    $forced = getenv('PRETTY_URL');
-    if ($forced === 'off' || $forced === 'false' || $forced === '0') {
-        return false;
-    }
-    if ($forced === 'on' || $forced === 'true' || $forced === '1') {
-        return true;
-    }
-
-    return !str_ends_with($script, '/index.php');
 }
 
 function e($value): string

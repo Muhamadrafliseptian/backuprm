@@ -95,6 +95,7 @@ $qsBase = $qsArr ? '&' . http_build_query($qsArr) : '';
 <!-- Filter -->
 <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
     <form method="get" action="<?= base_url('log') ?>" class="grid grid-cols-1 md:grid-cols-6 gap-3">
+    <input type="hidden" name="r" value="log">
         <select name="level" class="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:border-mint-500 focus:outline-none">
             <option value="">Semua Level</option>
             <option value="info"    <?= $fLevel === 'info' ? 'selected' : '' ?>>Info</option>

@@ -99,7 +99,9 @@
     window.doLogout = function (reason) {
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = window.BASE_URL + '/actions/logout';
+        form.action = window.u
+            ? window.u('actions/logout')
+            : window.BASE_URL + '/actions/logout';
         form.style.display = 'none';
 
         const token = document.createElement('input');
