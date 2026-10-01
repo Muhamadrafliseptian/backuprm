@@ -39,26 +39,28 @@ if (env('APP_DEBUG', 'false') === 'true') {
 
 // ---------- Deteksi BASE_URL otomatis & dinamis ----------
 if (!defined('BASE_URL')) {
-    // Prioritas 1: Gunakan APP_URL dari .env jika didefinisikan
+    // Prioritas 1: Gunakan APP_URL dari .env jika didefinisikan.
+    // Useful di belakang reverse proxy/WAF yang tidak meneruskan host dengan baik.
     $appUrl = env('APP_URL');
-    
+
     if ($appUrl) {
-        $baseUrl = rtrim($appUrl, '/') . '/';
+        $baseUrl = rtrim($appUrl, '/');
     } else {
         // Prioritas 2: Deteksi otomatis dari Server Request
         $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-        
+
         // Dukungan Reverse Proxy / WAF Kominfotik (X-Forwarded-Proto & X-Forwarded-Host)
         if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
             $scheme = explode(',', $_SERVER['HTTP_X_FORWARDED_PROTO'])[0];
         }
         $host = $_SERVER['HTTP_X_FORWARDED_HOST'] ?? ($_SERVER['HTTP_HOST'] ?? 'localhost:8888');
-        
+
         $script = $_SERVER['SCRIPT_NAME'] ?? ($_SERVER['PHP_SELF'] ?? '/index.php');
         $dir    = rtrim(str_replace('\\', '/', dirname($script)), '/');
-        
-        $baseUrl = $scheme . '://' . $host . $dir;
-        $baseUrl = rtrim($baseUrl, '/') . '/';
+
+        // Tanpa trailing slash: base_url() sudah menambah '/' sendiri,
+        // kalau tidak akan jadi URL ganda seperti /rekam-medis//dashboard
+        $baseUrl = rtrim($scheme . '://' . $host . $dir, '/');
     }
 
     define('BASE_URL', $baseUrl);

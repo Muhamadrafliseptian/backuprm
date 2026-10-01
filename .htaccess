@@ -13,7 +13,10 @@ DirectoryIndex index.php
 
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteBase /backup-rm/
+
+    # RewriteBase sengaja TIDAK ditulis hardcode di sini.
+    # Tanpa RewriteBase, Apache otomatis memakai path folder ini sebagai basis.
+    # Efeknya: rename folder aplikasi tidak perlu ubah .htaccess sama sekali.
 
     # Blokir akses ke folder internal (backups, uploads, logs, database, .git)
     RewriteRule ^(?:backups|uploads|logs|database|\.git|\.svn)(?:/|$) - [R=404,L]
