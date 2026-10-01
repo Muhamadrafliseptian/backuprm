@@ -10,7 +10,33 @@ require_once __DIR__ . '/../bootstrap/internal_guard.php';
 
 function base_url(string $path = ''): string
 {
-    return BASE_URL . '/' . ltrim($path, '/');
+    $path = ltrim($path, '/');
+    if ($path === '') {
+        return BASE_URL . '/index.php';
+    }
+
+    // Asset (css/js/img) selalu jalur statis, tidak ikut mode routing
+    if (str_starts_with($path, 'assets/')) {
+        return BASE_URL . '/' . $path;
+    }
+
+    // Ikuti mode routing yang aktif:
+    //   stub   -> /dashboard.php   (tanpa rewrite)
+    //   pretty -> /dashboard       (.htaccess / try_files)
+    //   query  -> /index.php?r=dashboard
+    if (str_contains($path, '?') || str_ends_with($path, '.php')) {
+        return BASE_URL . '/' . $path;
+    }
+
+    if (stub_url_enabled()) {
+        return stub_url($path);
+    }
+
+    if (pretty_url_enabled()) {
+        return BASE_URL . '/' . $path;
+    }
+
+    return BASE_URL . '/index.php?r=' . rawurlencode($path);
 }
 
 function asset(string $path): string
