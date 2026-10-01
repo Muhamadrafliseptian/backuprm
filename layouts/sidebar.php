@@ -153,6 +153,10 @@ if (!function_exists('nav_icon_multi')) {
 					<i class="ri-download-cloud-2-line <?= nav_icon('backup-all', $__page) ?>"></i>
 					<span>Backup All Record DB</span>
 				</a>
+				<a href="<?= base_url('akun') ?>" class="<?= nav_active('akun', $__page) ?>">
+					<i class="ri-team-line <?= nav_icon('akun', $__page) ?>"></i>
+					<span>Manajemen Akun</span>
+				</a>
 				<a href="<?= base_url('about') ?>" class="<?= nav_active('about', $__page) ?>">
 					<i class="ri-information-line <?= nav_icon('about', $__page) ?>"></i>
 					<span>Tentang</span>

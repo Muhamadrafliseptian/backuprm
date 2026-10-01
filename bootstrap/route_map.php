@@ -22,6 +22,7 @@ return [
     'login'            => 'login.php',
     'dashboard'        => 'dashboard.php',
     'about'            => 'about.php',
+    'akun'             => 'akun.php',
     'pasien'           => 'pasien.php',
     'kunjungan'        => 'kunjungan.php',
     'kunjungan-detail' => 'kunjungan_detail.php',

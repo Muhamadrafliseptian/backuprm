@@ -66,3 +66,12 @@
 [2026-10-01 13:35:31] [::1] [8813084] [INFO] logout | User logout (manual): 8813084
 [2026-10-01 13:36:19] [::1] [guest] [INFO] login | DEV bypass login: 8813084
 [2026-10-01 13:36:19] [::1] [8813084] [INFO] login | Berhasil login: 200303003
+[2026-10-01 13:42:51] [::1] [8813084] [INFO] login | Berhasil login: 8813084
+[2026-10-01 13:43:00] [::1] [8813084] [INFO] logout | User logout (manual): 8813084
+[2026-10-01 13:43:30] [::1] [8813084] [INFO] login | Berhasil login: 8813084
+[2026-10-01 13:43:41] [::1] [8813084] [INFO] akun | Tambah akun: 9001234 (user)
+[2026-10-01 13:43:52] [::1] [8813084] [INFO] logout | User logout (manual): 8813084
+[2026-10-01 13:43:58] [::1] [9001234] [INFO] login | Berhasil login: 9001234
+[2026-10-01 13:44:01] [::1] [9001234] [INFO] logout | User logout (manual): 9001234
+[2026-10-01 13:44:16] [::1] [9001234] [INFO] login | Berhasil login: 9001234
+[2026-10-01 13:44:46] [::1] [8813084] [INFO] login | Berhasil login: 8813084
