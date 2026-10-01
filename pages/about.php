@@ -216,7 +216,7 @@ document.addEventListener('DOMContentLoaded', function () {
             fd.append('password', result.value.password);
             fd.append('confirm', result.value.confirm);
 
-            fetch(window.BASE_URL + '/actions/reset-all', {
+            fetch(window.u('/actions/reset-all'), {
                 method: 'POST',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',

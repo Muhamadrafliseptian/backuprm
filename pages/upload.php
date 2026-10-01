@@ -239,7 +239,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const fd = new FormData(this);
             NProgress.start();
 
-            fetch(window.BASE_URL + '/actions/upload-sql', {
+            fetch(window.u('/actions/upload-sql'), {
                 method: 'POST',
                 headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': window.CSRF_TOKEN },
                 body: fd
@@ -277,7 +277,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (btnPreview) {
         btnPreview.addEventListener('click', function () {
             NProgress.start();
-            fetch(window.BASE_URL + '/actions/preview-data', {
+            fetch(window.u('/actions/preview-data'), {
                 method: 'POST',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
@@ -295,7 +295,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (json.ok) {
                     sessionStorage.setItem('preview_data', JSON.stringify(json));
                     sessionStorage.setItem('preview_data_ts', Date.now().toString());
-                    window.location.href = window.BASE_URL + '/generate';
+                    window.location.href = window.u('generate');
                 } else {
                     showError('Preview Gagal', json.msg || 'Terjadi kesalahan.');
                 }
@@ -332,7 +332,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }).then(r => {
                 if (!r.isConfirmed) return;
                 NProgress.start();
-                fetch(window.BASE_URL + '/actions/clear-backup', {
+                fetch(window.u('/actions/clear-backup'), {
                     method: 'POST',
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',

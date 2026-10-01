@@ -495,7 +495,7 @@ if ($batchId !== '') {
         }).then(ok => {
             if (!ok) return;
             NProgress.start();
-            fetch(window.BASE_URL + '/actions/mark-verified', {
+            fetch(window.u('/actions/mark-verified'), {
                 method: 'POST',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',

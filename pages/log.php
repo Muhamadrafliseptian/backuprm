@@ -191,7 +191,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }).then(ok => {
                 if (!ok) return;
                 NProgress.start();
-                fetch(window.BASE_URL + '/actions/clear-log', {
+                fetch(window.u('/actions/clear-log'), {
                     method: 'POST',
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',

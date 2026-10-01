@@ -25,6 +25,17 @@ declare(strict_types=1);
     window.CSRF_TOKEN       = "<?= csrf_token() ?>";
     window.APP_NAME         = "<?= e(APP_NAME) ?>";
     window.SESSION_LIFETIME = <?= (int) SESSION_LIFETIME ?>;
+    window.PRETTY_URL       = <?= pretty_url_enabled() ? 'true' : 'false' ?>;
+
+    // Pembuat URL aman untuk AJAX/redirect.
+    // Kalau pretty URL tidak tersedia (tanpa .htaccess / tanpa rewrite nginx),
+    // route harus lewat index.php?r=... supaya tidak 404.
+    window.u = function (path) {
+        path = String(path || '').replace(/^\/+/, '');
+        if (window.PRETTY_URL) return window.BASE_URL + '/' + path;
+        var sep = path.indexOf('?') === -1 ? '?' : '&';
+        return window.BASE_URL + '/index.php' + sep + 'r=' + encodeURIComponent(path);
+    };
 </script>
 
 <!-- Theme Helper (Modal, Toast, Confirm, Logout) -->
@@ -74,7 +85,7 @@ declare(strict_types=1);
        PING SERVER — sinkron timer server
        ============================================================ */
     function pingServer() {
-        return fetch(window.BASE_URL + '/actions/ping', {
+        return fetch(window.u('/actions/ping'), {
             method: 'POST',
             headers: {
                 'X-Requested-With': 'XMLHttpRequest',
@@ -205,7 +216,7 @@ declare(strict_types=1);
                 ['_token=' + encodeURIComponent(window.CSRF_TOKEN)],
                 { type: 'application/x-www-form-urlencoded' }
             );
-            navigator.sendBeacon(window.BASE_URL + '/actions/ping', data);
+            navigator.sendBeacon(window.u('/actions/ping'), data);
         } catch (e) {
             // ignore
         }

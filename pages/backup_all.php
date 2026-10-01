@@ -322,7 +322,7 @@ document.addEventListener('DOMContentLoaded', function () {
         params.append('format', format);
         params.append('mode', mode);
 
-        fetch(window.BASE_URL + '/actions/download-backup', {
+        fetch(window.u('/actions/download-backup'), {
             method: 'POST',
             headers: {
                 'X-Requested-With': 'XMLHttpRequest',

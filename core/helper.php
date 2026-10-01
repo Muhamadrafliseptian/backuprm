@@ -18,8 +18,42 @@ function asset(string $path): string
 
 function redirect(string $path): void
 {
-    header('Location: ' . base_url($path));
+    // Deteksi apakah routing pretty URL tersedia.
+    // Kalau tidak (mis. tanpa .htaccess / tanpa rewrite di nginx), pakai
+    // query string ?r= yang sudah didukung bootstrap/routes.php. Kalau tidak
+    // ikut ditangani, user akan diarahkan ke URL yang 404 setelah login.
+    $target = base_url($path);
+    if (!pretty_url_enabled() && $path !== '') {
+        $target = BASE_URL . '/index.php?r=' . rawurlencode(ltrim($path, '/'));
+    }
+
+    header('Location: ' . $target);
     exit;
+}
+
+/**
+ * Apakah pretty URL (/dashboard) tersedia?
+ *
+ * Pretty URL butuh rewrite: .htaccess (Apache) atau try_files (nginx).
+ * Kalau keduanya tidak ada, route harus lewat ?r=.
+ *
+ * Cara deteksi: kalau SCRIPT_NAME berakhiran index.php, kemungkinan besar
+ * request datang lewat ?r= (bukan pretty URL), jadi pretty URL tidak dipakai.
+ */
+function pretty_url_enabled(): bool
+{
+    $script = (string)($_SERVER['SCRIPT_NAME'] ?? '');
+
+    // .env: PRETTY_URL=off untuk memaksa ?r= di server tanpa rewrite
+    $forced = getenv('PRETTY_URL');
+    if ($forced === 'off' || $forced === 'false' || $forced === '0') {
+        return false;
+    }
+    if ($forced === 'on' || $forced === 'true' || $forced === '1') {
+        return true;
+    }
+
+    return !str_ends_with($script, '/index.php');
 }
 
 function e($value): string

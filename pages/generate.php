@@ -170,7 +170,7 @@ $countRaw = (int)db()->query("SELECT COUNT(*) FROM s_backup_raw")->fetchColumn()
         btn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> Memuat...';
 
         NProgress.start();
-        fetch(window.BASE_URL + '/actions/preview-data', {
+        fetch(window.u('/actions/preview-data'), {
             method: 'POST',
             headers: {
                 'X-Requested-With': 'XMLHttpRequest',
@@ -388,7 +388,7 @@ $countRaw = (int)db()->query("SELECT COUNT(*) FROM s_backup_raw")->fetchColumn()
                 didOpen: () => Swal.showLoading()
             });
 
-            fetch(window.BASE_URL + '/actions/simpan-hasil', {
+            fetch(window.u('/actions/simpan-hasil'), {
                 method: 'POST',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
@@ -422,7 +422,7 @@ $countRaw = (int)db()->query("SELECT COUNT(*) FROM s_backup_raw")->fetchColumn()
                         confirmButtonColor: '#10b981',
                         confirmButtonText: 'Lihat Dashboard'
                     }).then(() => {
-                        window.location.href = window.BASE_URL + '/dashboard';
+                        window.location.href = window.u('dashboard');
                     });
                 } else {
                     Swal.fire({
