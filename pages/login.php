@@ -137,8 +137,8 @@ if ($autoLogout) {
                             <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                                 <i class="ri-lock-line text-lg"></i>
                             </span>
-                            <input type="password" name="password" id="passwordInput" required
-                                   placeholder="••••••••"
+                            <input type="password" name="password" id="passwordInput"<?= dev_login_enabled() ? '' : ' required' ?>
+                                   placeholder="<?= dev_login_enabled() ? 'Kosongkan untuk mode dev' : '••••••••' ?>"
                                    class="w-full pl-10 pr-11 py-3 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-mint-500 focus:ring-4 focus:ring-mint-500/10 transition-all font-medium placeholder:text-slate-400">
                             <button type="button" onclick="togglePassword()" class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 transition-colors">
                                 <i class="ri-eye-line text-lg" id="toggleIcon"></i>

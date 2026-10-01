@@ -11,6 +11,19 @@ require_once __DIR__ . '/../bootstrap/internal_guard.php';
 const LOGIN_MAX_ATTEMPTS = 5;
 const LOGIN_LOCK_MINUTES = 15;
 
+/**
+ * Apakah mode login development aktif?
+ *
+ * Kalau DEV_LOGIN=true di .env (dan APP_ENV bukan production), password
+ * tidak wajib diisi dan tidak diverifikasi. Hanya untuk memudahkan
+ * pengembangan - JANGAN dipakai di server produksi.
+ */
+function dev_login_enabled(): bool
+{
+    return getenv('DEV_LOGIN') === 'true'
+        && getenv('APP_ENV') !== 'production';
+}
+
 function auth_user(): ?array
 {
     return $_SESSION['user'] ?? null;
@@ -133,6 +146,42 @@ function auth_reset_attempts(int $pegId): void
 
 function auth_attempt(string $nrk, string $password): array
 {
+    /* ============================================================
+       MODE DEVELOPMENT: lewati pengecekan password
+       ============================================================
+       Aktif hanya kalau DEV_LOGIN=true di .env. Tujuannya supaya
+       pengembangan tidak tertahan masalah password/session.
+
+       Keamanan:
+         - Wajib DEV_LOGIN=true EKSPLISIT di .env (default-nya false)
+         - Hanya untuk akun ber-role admin dan status aktif
+         - Otomatis nonaktif kalau APP_ENV=production
+
+       JANGAN pernah menyalakan ini di server produksi.
+       */
+    $devMode = dev_login_enabled();
+
+    if ($devMode) {
+        $pegawai = auth_find_by_nrk($nrk);
+
+        if (!$pegawai) {
+            // Fallback development: pakai akun admin aktif pertama
+            $stmt = db()->query("
+                SELECT * FROM m_pegawai
+                 WHERE peg_status = 'aktif'
+                 ORDER BY (peg_role = 'admin') DESC, peg_id ASC
+                 LIMIT 1
+            ");
+            $pegawai = $stmt->fetch() ?: null;
+        }
+
+        if ($pegawai && ($pegawai['peg_role'] ?? '') === 'admin') {
+            auth_reset_attempts((int) $pegawai['peg_id']);
+            log_activity('login', 'DEV bypass login: ' . $pegawai['peg_nrk']);
+            return ['ok' => true, 'user' => $pegawai];
+        }
+    }
+
     $pegawai = auth_find_by_nrk($nrk);
     if (!$pegawai) {
         log_error(sprintf('LOGIN NOTFOUND nrk=%s ip=%s', $nrk, $_SERVER['REMOTE_ADDR'] ?? '-'));

@@ -12,6 +12,7 @@ csrf_check_or_die();
 
 /* ============================================================
    RATE LIMIT PER IP (10 percobaan per 5 menit)
+   Dinonaktifkan otomatis saat mode development aktif.
    ============================================================ */
 $ip       = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
 $ipKey    = 'rl_login_' . md5($ip);
@@ -24,7 +25,7 @@ if ($rl['reset'] < time()) {
     $rl = ['count' => 0, 'reset' => time() + $rlWindow];
 }
 
-if ($rl['count'] >= $rlMax) {
+if (!dev_login_enabled() && $rl['count'] >= $rlMax) {
     $wait = $rl['reset'] - time();
     log_error("LOGIN RATE LIMIT ip={$ip} wait={$wait}s");
     flash('error', 'Terlalu banyak percobaan. Coba lagi dalam ' . ceil($wait / 60) . ' menit.');
@@ -34,8 +35,12 @@ if ($rl['count'] >= $rlMax) {
 $nrk      = trim((string)($_POST['nrk'] ?? ''));
 $password = (string)($_POST['password'] ?? '');
 
+// Mode development: password boleh kosong.
 $v = new Validator(['nrk' => $nrk, 'password' => $password]);
-$v->required('nrk', 'NRK')->required('password', 'Password');
+$v->required('nrk', 'NRK');
+if (!dev_login_enabled()) {
+    $v->required('password', 'Password');
+}
 
 if ($v->fails()) {
     flash('error', $v->firstError());
