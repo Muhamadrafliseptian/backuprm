@@ -14,18 +14,12 @@ DirectoryIndex index.php
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # RewriteBase sengaja TIDAK ditulis hardcode di sini.
-    # Tanpa RewriteBase, Apache otomatis memakai path folder ini sebagai basis.
-    # Efeknya: rename folder aplikasi tidak perlu ubah .htaccess sama sekali.
+    # 1. Blokir akses langsung ke folder sensitif & file .php internal
+    RewriteCond %{REQUEST_URI} ^/(backups|uploads|logs|database|\.git|\.svn)/ [NC,OR]
+    RewriteCond %{REQUEST_URI} ^/(pages|actions|core|config|bootstrap|layouts)/.*\.php$ [NC]
+    RewriteRule ^ - [F,L]
 
-    # Blokir akses ke folder internal (backups, uploads, logs, database, .git)
-    RewriteRule ^(?:backups|uploads|logs|database|\.git|\.svn)(?:/|$) - [R=404,L]
-
-    # Hanya index.php yang boleh dipanggil langsung; pages/, actions/, core/,
-    # config/, bootstrap/, layouts/ harus lewat router (/login, /actions/upload-sql, dll)
-    RewriteRule ^(?:pages|actions|core|config|bootstrap|layouts)/.*\.php$ - [R=404,L]
-
-    # Routing pretty URL
+    # 2. Pretty URL Routing standar
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^(.*)$ index.php [QSA,L]
