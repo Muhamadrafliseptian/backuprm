@@ -39,14 +39,29 @@ if (env('APP_DEBUG', 'false') === 'true') {
 
 // ---------- Deteksi BASE_URL otomatis & dinamis ----------
 if (!defined('BASE_URL')) {
-    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $host   = $_SERVER['HTTP_HOST'] ?? 'localhost:8888';
+    // Prioritas 1: Gunakan APP_URL dari .env jika didefinisikan
+    $appUrl = env('APP_URL');
     
-    // Deteksi script_name secara otomatis tanpa hardcode nama folder
-    $script = $_SERVER['SCRIPT_NAME'] ?? ($_SERVER['PHP_SELF'] ?? '/index.php');
-    $dir    = rtrim(str_replace('\\', '/', dirname($script)), '/');
-    
-    define('BASE_URL', $scheme . '://' . $host . $dir);
+    if ($appUrl) {
+        $baseUrl = rtrim($appUrl, '/') . '/';
+    } else {
+        // Prioritas 2: Deteksi otomatis dari Server Request
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        
+        // Dukungan Reverse Proxy / WAF Kominfotik (X-Forwarded-Proto & X-Forwarded-Host)
+        if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
+            $scheme = explode(',', $_SERVER['HTTP_X_FORWARDED_PROTO'])[0];
+        }
+        $host = $_SERVER['HTTP_X_FORWARDED_HOST'] ?? ($_SERVER['HTTP_HOST'] ?? 'localhost:8888');
+        
+        $script = $_SERVER['SCRIPT_NAME'] ?? ($_SERVER['PHP_SELF'] ?? '/index.php');
+        $dir    = rtrim(str_replace('\\', '/', dirname($script)), '/');
+        
+        $baseUrl = $scheme . '://' . $host . $dir;
+        $baseUrl = rtrim($baseUrl, '/') . '/';
+    }
+
+    define('BASE_URL', $baseUrl);
 }
 
 // ---------- Load Config & Core ----------
