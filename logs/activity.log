@@ -75,3 +75,21 @@
 [2026-10-01 13:44:01] [::1] [9001234] [INFO] logout | User logout (manual): 9001234
 [2026-10-01 13:44:16] [::1] [9001234] [INFO] login | Berhasil login: 9001234
 [2026-10-01 13:44:46] [::1] [8813084] [INFO] login | Berhasil login: 8813084
+[2026-10-01 14:15:18] [::1] [8813084] [INFO] login | Berhasil login: 8813084
+[2026-10-01 14:15:26] [::1] [8813084] [INFO] upload_sql | Upload backup_rajal_dinkes_2026_2026-09-01_sampai_2026-09-01.sql: mode=replace, 2962 baris, batch=BATCH-20261001-141526-b73b8b, file_hash=07666800fa3a..., raw_hash=07666800fa3a...
+[2026-10-01 14:15:34] [::1] [8813084] [INFO] upload_sql | Upload backup_rajal_dinkes_2026_2026-09-01_sampai_2026-09-01.sql: mode=replace, 2962 baris, batch=BATCH-20261001-141533-8c39ec, file_hash=07666800fa3a..., raw_hash=07666800fa3a...
+[2026-10-01 14:15:41] [::1] [8813084] [INFO] preview_data | Preview: {"raw_rows":2962,"m_pasien":2621,"t_kunjungan":2218,"t_pemeriksaan":1099,"t_diagnosis":1383,"t_tindakan":83,"m_tenaga_kesehatan":72,"t_resep":667,"d_resep_detail":2163,"m_obat":107,"t_laboratorium":532,"skipped":0}
+[2026-10-01 14:15:48] [::1] [8813084] [INFO] simpan_hasil | Sukses: {"m_pasien":0,"t_kunjungan":0,"t_pemeriksaan":0,"t_diagnosis":0,"t_tindakan":0,"m_tenaga_kesehatan":0,"t_resep":0,"d_resep_detail":0,"m_obat":0,"t_laboratorium":0} | result_hash=7c73f26e1f50...
+[2026-10-01 14:16:01] [::1] [8813084] [INFO] preview_data | Preview: {"raw_rows":2962,"m_pasien":2621,"t_kunjungan":2218,"t_pemeriksaan":1099,"t_diagnosis":1383,"t_tindakan":83,"m_tenaga_kesehatan":72,"t_resep":667,"d_resep_detail":2163,"m_obat":107,"t_laboratorium":532,"skipped":0}
+[2026-10-01 14:16:07] [::1] [8813084] [INFO] simpan_hasil | Sukses: {"m_pasien":0,"t_kunjungan":0,"t_pemeriksaan":0,"t_diagnosis":0,"t_tindakan":0,"m_tenaga_kesehatan":0,"t_resep":0,"d_resep_detail":0,"m_obat":0,"t_laboratorium":0} | result_hash=7c73f26e1f50...
+[2026-10-01 14:28:19] [::1] [8813084] [INFO] preview_data | Preview: {"raw_rows":2962,"m_pasien":2621,"t_kunjungan":2218,"t_pemeriksaan":1099,"t_diagnosis":1383,"t_tindakan":83,"m_tenaga_kesehatan":72,"t_resep":667,"d_resep_detail":2163,"m_obat":107,"t_laboratorium":532,"skipped":0}
+[2026-10-07 14:30:27] [::1] [8813084] [INFO] login | Berhasil login: 8813084
+[2026-10-07 14:31:27] [::1] [8813084] [INFO] login | Berhasil login: 8813084
+[2026-10-07 14:36:50] [::1] [8813084] [INFO] login | Berhasil login: 8813084
+[2026-10-07 14:37:43] [::1] [8813084] [INFO] login | Berhasil login: 8813084
+[2026-10-07 14:55:47] [::1] [8813084] [INFO] login | Berhasil login: 8813084
+[2026-10-07 15:00:46] [::1] [8813084] [INFO] upload_chunk_sql | Upload Chunk backup_rajal_dinkes_2026_2026-10-02_sampai_2026-10-02.sql: mode=replace, 2081 baris, batch=BATCH-20261007-150046-94560f
+[2026-10-07 15:01:26] [::1] [8813084] [INFO] clear_backup | Kosongkan s_backup_raw (2081 baris dihapus)
+[2026-10-07 15:01:35] [::1] [8813084] [INFO] upload_chunk_sql | Upload Chunk backup_rajal_dinkes_2026_2026-10-02_sampai_2026-10-02.sql: mode=replace, 2081 baris, batch=BATCH-20261007-150134-ab1023
+[2026-10-07 15:01:41] [::1] [8813084] [INFO] preview_data | Preview: {"raw_rows":2081,"m_pasien":1731,"t_kunjungan":1528,"t_pemeriksaan":1113,"t_diagnosis":1440,"t_tindakan":88,"m_tenaga_kesehatan":79,"t_resep":705,"d_resep_detail":2400,"m_obat":108,"t_laboratorium":629,"skipped":0}
+[2026-10-07 15:01:53] [::1] [8813084] [INFO] simpan_hasil | Sukses: {"m_pasien":1655,"t_kunjungan":1528,"t_pemeriksaan":1113,"t_diagnosis":1440,"t_tindakan":88,"m_tenaga_kesehatan":16,"t_resep":705,"d_resep_detail":2400,"m_obat":15,"t_laboratorium":629} | result_hash=cb75893d367d...

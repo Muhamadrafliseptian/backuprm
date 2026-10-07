@@ -4,3 +4,4 @@
 [2026-10-01 13:43:06] LOGIN FAIL nrk=8813084 ip=::1 attempts=1 locked_until=-
 [2026-10-01 13:43:08] LOGIN NOTFOUND nrk=9999999 ip=::1
 [2026-10-01 13:44:07] LOGIN FAIL nrk=9001234 ip=::1 attempts=1 locked_until=-
+[2026-10-07 14:55:36] LOGIN NOTFOUND nrk=020302 ip=::1

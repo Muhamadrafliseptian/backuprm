@@ -1,8 +1,8 @@
 <?php
 /**
- * file   : upload.php
+ * file   : pages/upload.php
  * path   : C:\xampp\htdocs\backuprm\pages\upload.php
- * fungsi : Upload file SQL + preview + clear (versi sederhana)
+ * fungsi : Upload file SQL via Chunked Upload (Frontend) + preview + clear
  */
 declare(strict_types=1);
 
@@ -18,37 +18,30 @@ $countRaw = (int)$pdo->query("SELECT COUNT(*) FROM s_backup_raw")->fetchColumn()
 /* Riwayat 10 batch terakhir */
 $recentBatches = [];
 try {
-    $recentBatches = $pdo->query("
+    $recentBatches =$pdo->query("
         SELECT batch_id, uploaded_at, uploaded_by_nama,
                file_name, imported_rows, status
         FROM s_upload_batch
         ORDER BY uploaded_at DESC
         LIMIT 10
     ")->fetchAll();
-} catch (Throwable $e) {
-    $recentBatches = [];
+} catch (Throwable $e) {$recentBatches = [];
 }
 ?>
 
-<!-- ============================================================
-     HEADER
-     ============================================================ -->
 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 fade-in-up">
     <div>
         <h2 class="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">Upload Backup</h2>
         <p class="text-xs md:text-sm text-slate-500">
-            Upload file <code class="text-mint-600 bg-mint-50 px-1.5 py-0.5 rounded">.sql</code> untuk diproses.
+            Upload file <code class="text-mint-600 bg-mint-50 px-1.5 py-0.5 rounded">.sql</code> ukuran besar secara bertahap.
         </p>
     </div>
 </div>
 
-<!-- ============================================================
-     FORM UPLOAD
-     ============================================================ -->
-<div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+<div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mt-4">
     <div class="p-5 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
         <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
-            <i class="ri-upload-cloud-line text-mint-600"></i> Upload File SQL
+            <i class="ri-upload-cloud-line text-mint-600"></i> Upload File SQL (Chunked)
         </h3>
         <?php if ($countRaw > 0): ?>
         <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
@@ -57,30 +50,41 @@ try {
         <?php endif; ?>
     </div>
     <div class="p-5">
-        <form id="formUpload" enctype="multipart/form-data" class="space-y-4">
+        <form id="formUpload" class="space-y-4">
             <?= csrf_field() ?>
 
             <div>
                 <label class="block text-xs font-semibold text-slate-700 mb-1.5">Pilih File SQL</label>
-                <input type="file" name="sql_file" accept=".sql" required
+                <input type="file" name="sql_file" id="sql_file" accept=".sql" required
                        class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-mint-100 file:text-mint-700 file:text-xs file:font-semibold hover:file:bg-mint-200 focus:bg-white focus:border-mint-500 focus:ring-2 focus:ring-mint-100 focus:outline-none transition-all">
                 <p class="text-[11px] text-slate-400 mt-1">
-                    Hanya file <code class="text-mint-600">.sql</code>, maksimal <?= round(UPLOAD_MAX_SIZE / 1048576, 0) ?> MB.
+                    Mendukung file besar (>1 GB) tanpa risiko timeout.
                 </p>
             </div>
 
             <div>
                 <label class="block text-xs font-semibold text-slate-700 mb-1.5">Mode Import</label>
-                <select name="mode" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:bg-white focus:border-mint-500 focus:ring-2 focus:ring-mint-100 focus:outline-none transition-all">
+                <select name="mode" id="mode" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:bg-white focus:border-mint-500 focus:ring-2 focus:ring-mint-100 focus:outline-none transition-all">
                     <option value="replace">Ganti (kosongkan s_backup_raw dulu)</option>
                     <option value="append">Tambah (append ke data yang ada)</option>
                 </select>
             </div>
 
+            <!-- Progress Bar Sederhana -->
+            <div id="progressWrapper" class="hidden space-y-1">
+                <div class="flex justify-between text-xs text-slate-600 font-semibold">
+                    <span id="progressText">Mengunggah...</span>
+                    <span id="progressPercent">0%</span>
+                </div>
+                <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                    <div id="progressBar" class="bg-mint-500 h-2.5 rounded-full transition-all duration-150" style="width: 0%"></div>
+                </div>
+            </div>
+
             <div class="flex flex-col sm:flex-row gap-2 pt-2">
                 <button type="submit" id="btnUpload"
                         class="flex-1 bg-mint-500 hover:bg-mint-600 text-white text-xs font-bold px-4 py-3 rounded-xl transition-all shadow-md shadow-mint-500/20 active:scale-95">
-                    <i class="ri-upload-cloud-line mr-1"></i> Upload File
+                    <i class="ri-upload-cloud-line mr-1"></i> Upload File SQL
                 </button>
                 <?php if ($countRaw > 0): ?>
                 <button type="button" id="btnPreview"
@@ -97,11 +101,9 @@ try {
     </div>
 </div>
 
-<!-- ============================================================
-     RIWAYAT UPLOAD (SEDERHANA)
-     ============================================================ -->
+<!-- Bagian Tabel Riwayat Upload Tetap Sama -->
 <?php if ($recentBatches): ?>
-<div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+<div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mt-6">
     <div class="p-5 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
         <div class="flex items-center gap-2">
             <i class="ri-history-line text-mint-600 text-lg"></i>
@@ -126,82 +128,31 @@ try {
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 font-medium text-slate-600">
-            <?php foreach ($recentBatches as $b):
-                /* ---------- TENTUKAN STATUS & BADGE ---------- */
-                if (in_array($b['status'], ['generated', 'verified'], true)) {
-                    // Sudah masuk database
-                    $rowClass    = 'bg-mint-50/20';
-                    $statusBadge = 'bg-mint-50 text-mint-700 border-mint-200/60';
-                    $statusText  = 'SUDAH DI-UPLOAD';
-                    $statusIcon  = 'ri-checkbox-circle-fill';
-                    $actionHtml  = '<a href="' . base_url('verifikasi?batch=' . urlencode($b['batch_id'])) . '"
-                                       class="inline-flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold text-mint-700 bg-mint-50 hover:bg-mint-100 border border-mint-200 rounded-lg transition-colors">
-                                        <i class="ri-shield-check-line"></i> Verifikasi
-                                    </a>';
-                } elseif ($b['status'] === 'uploaded') {
-                    // Sudah upload tapi belum simpan ke DB
-                    $rowClass    = 'bg-amber-50/30';
-                    $statusBadge = 'bg-amber-50 text-amber-700 border-amber-200/60';
-                    $statusText  = 'BELUM DI-UPLOAD';
-                    $statusIcon  = 'ri-time-line';
-                    $actionHtml  = '<a href="' . base_url('generate') . '"
-                                       class="inline-flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-colors">
-                                        <i class="ri-magic-line"></i> Preview &amp; Simpan
-                                    </a>';
-                } elseif ($b['status'] === 'mismatch') {
-                    $rowClass    = 'bg-rose-50/30';
-                    $statusBadge = 'bg-rose-50 text-rose-700 border-rose-200/60';
-                    $statusText  = 'MISMATCH';
-                    $statusIcon  = 'ri-close-circle-fill';
-                    $actionHtml  = '<a href="' . base_url('verifikasi?batch=' . urlencode($b['batch_id'])) . '"
-                                       class="inline-flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg transition-colors">
-                                        <i class="ri-alert-line"></i> Cek
-                                    </a>';
-                } elseif ($b['status'] === 'failed') {
-                    $rowClass    = 'bg-rose-50/30';
-                    $statusBadge = 'bg-rose-50 text-rose-700 border-rose-200/60';
-                    $statusText  = 'GAGAL';
-                    $statusIcon  = 'ri-error-warning-line';
-                    $actionHtml  = '<a href="' . base_url('verifikasi?batch=' . urlencode($b['batch_id'])) . '"
-                                       class="inline-flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg transition-colors">
-                                        <i class="ri-error-warning-line"></i> Detail
-                                    </a>';
+            <?php foreach ($recentBatches as$b):
+                if (in_array($b['status'], ['generated', 'verified'], true)) {$rowClass    = 'bg-mint-50/20';
+                    $statusBadge = 'bg-mint-50 text-mint-700 border-mint-200/60';$statusText  = 'SUDAH DI-UPLOAD';
+                    $statusIcon  = 'ri-checkbox-circle-fill';$actionHtml  = '<a href="' . base_url('verifikasi?batch=' . urlencode($b['batch_id'])) . '" class="inline-flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold text-mint-700 bg-mint-50 hover:bg-mint-100 border border-mint-200 rounded-lg transition-colors"><i class="ri-shield-check-line"></i> Verifikasi</a>';
+                } elseif ($b['status'] === 'uploaded') {$rowClass    = 'bg-amber-50/30';
+                    $statusBadge = 'bg-amber-50 text-amber-700 border-amber-200/60';$statusText  = 'BELUM DI-UPLOAD';
+                    $statusIcon  = 'ri-time-line';$actionHtml  = '<a href="' . base_url('generate') . '" class="inline-flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-colors"><i class="ri-magic-line"></i> Preview &amp; Simpan</a>';
                 } else {
-                    $rowClass    = '';
-                    $statusBadge = 'bg-slate-50 text-slate-600 border-slate-200';
+                    $rowClass    = '';$statusBadge = 'bg-slate-50 text-slate-600 border-slate-200';
                     $statusText  = strtoupper($b['status']);
-                    $statusIcon  = 'ri-information-line';
-                    $actionHtml  = '<a href="' . base_url('verifikasi?batch=' . urlencode($b['batch_id'])) . '"
-                                       class="inline-flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors">
-                                        <i class="ri-information-line"></i> Detail
-                                    </a>';
+                    $statusIcon  = 'ri-information-line';$actionHtml  = '<a href="' . base_url('verifikasi?batch=' . urlencode($b['batch_id'])) . '" class="inline-flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors"><i class="ri-information-line"></i> Detail</a>';
                 }
             ?>
                 <tr class="hover:bg-slate-50/80 transition-colors <?= $rowClass ?>">
-                    <td class="py-3 px-4">
-                        <code class="text-mint-700 font-semibold text-[10px]"><?= e($b['batch_id']) ?></code>
-                    </td>
-                    <td class="py-3 px-4 text-slate-500 text-[11px] whitespace-nowrap">
-                        <?= e(date('d/m/Y H:i', strtotime($b['uploaded_at']))) ?>
-                    </td>
-                    <td class="py-3 px-4 text-slate-700 text-[11px] truncate" style="max-width:160px">
-                        <?= e($b['uploaded_by_nama'] ?: '-') ?>
-                    </td>
-                    <td class="py-3 px-4 text-slate-500 text-[11px] truncate" style="max-width:200px" title="<?= e($b['file_name']) ?>">
-                        <?= e($b['file_name'] ?: '-') ?>
-                    </td>
-                    <td class="py-3 px-4 text-center font-bold text-slate-800 text-[11px]">
-                        <?= number_format((int)$b['imported_rows']) ?>
-                    </td>
+                    <td class="py-3 px-4"><code class="text-mint-700 font-semibold text-[10px]"><?= e($b['batch_id']) ?></code></td>
+                    <td class="py-3 px-4 text-slate-500 text-[11px] whitespace-nowrap"><?= e(date('d/m/Y H:i', strtotime($b['uploaded_at']))) ?></td>
+                    <td class="py-3 px-4 text-slate-700 text-[11px] truncate" style="max-width:160px"><?= e($b['uploaded_by_nama'] ?: '-') ?></td>
+                    <td class="py-3 px-4 text-slate-500 text-[11px] truncate" style="max-width:200px" title="<?= e($b['file_name']) ?>"><?= e($b['file_name'] ?: '-') ?></td>
+                    <td class="py-3 px-4 text-center font-bold text-slate-800 text-[11px]"><?= number_format((int)$b['imported_rows']) ?></td>
                     <td class="py-3 px-4 text-center">
                         <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border <?= $statusBadge ?>">
-                            <i class="<?= $statusIcon ?>"></i>
-                            <?= e($statusText) ?>
+                            <i class="<?= $statusIcon ?>"></i> <?= e($statusText) ?>
                         </span>
                     </td>
-                    <td class="py-3 px-4 text-right">
-                        <?= $actionHtml ?>
-                    </td>
+                    <td class="py-3 px-4 text-right"><?= $actionHtml ?></td>
                 </tr>
             <?php endforeach; ?>
             </tbody>
@@ -232,49 +183,97 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     /* ============================================================
-       FORM UPLOAD
+       CHUNKS UPLOAD LOGIC (FRONTEND)
        ============================================================ */
     const formUpload = document.getElementById('formUpload');
     if (formUpload) {
-        formUpload.addEventListener('submit', function (e) {
+        formUpload.addEventListener('submit', async function (e) {
             e.preventDefault();
-            const fd = new FormData(this);
-            NProgress.start();
 
-            fetch(window.u('/actions/upload-sql'), {
-                method: 'POST',
-                headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': window.CSRF_TOKEN },
-                body: fd
-            })
-            .then(async (r) => {
-                NProgress.done();
-                const text = await r.text();
-                let json = null;
-                try { json = JSON.parse(text); }
-                catch (err) { return showError('Response bukan JSON', text); }
+            const fileInput = document.getElementById('sql_file');
+            if (fileInput.files.length === 0) return;
 
-                if (json.ok) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Berhasil Upload',
-                        text: json.msg,
-                        confirmButtonColor: '#10b981',
-                        confirmButtonText: 'OK'
-                    }).then(() => location.reload());
-                } else {
-                    showError('Upload Gagal', json.msg || 'Terjadi kesalahan.');
+            const file = fileInput.files[0];
+            const mode = document.getElementById('mode').value;
+            const CHUNK_SIZE = 2 * 1024 * 1024; // 2 MB per chunk
+            const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+            const uploadId = 'UP-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
+
+            const progressWrapper = document.getElementById('progressWrapper');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            const progressPercent = document.getElementById('progressPercent');
+            const btnUpload = document.getElementById('btnUpload');
+
+            progressWrapper.classList.remove('hidden');
+            btnUpload.disabled = true;
+            btnUpload.innerHTML = '<i class="ri-loader-4-line animate-spin mr-1"></i> Mengunggah...';
+
+            for (let currentChunk = 0; currentChunk < totalChunks; currentChunk++) {
+                const start = currentChunk * CHUNK_SIZE;
+                const end = Math.min(start + CHUNK_SIZE, file.size);
+                const chunk = file.slice(start, end);
+
+                const fd = new FormData();
+                fd.append('sql_chunk', chunk);
+                fd.append('chunk_index', currentChunk);
+                fd.append('total_chunks', totalChunks);
+                fd.append('upload_id', uploadId);
+                fd.append('file_name', file.name);
+                fd.append('mode', mode);
+
+                // Tambahkan CSRF token jika diperlukan oleh backend Anda
+                // fd.append('csrf_token', window.CSRF_TOKEN);
+
+                let percent = Math.round(((currentChunk + 1) / totalChunks) * 100);
+                progressBar.style.width = percent + '%';
+                progressPercent.innerText = percent + '%';
+                progressText.innerText = `Mengunggah bagian ${currentChunk + 1} dari ${totalChunks}...`;
+
+                try {
+                    const response = await fetch(window.u('/actions/upload-chunk'), {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-TOKEN': window.CSRF_TOKEN
+                        },
+                        body: fd
+                    });
+
+                    const text = await response.text();
+                    let json;
+                    try {
+                        json = JSON.parse(text);
+                    } catch (err) {
+                        throw new Error('Response bukan JSON: ' + text);
+                    }
+
+                    if (!json.ok) {
+                        throw new Error(json.msg || 'Gagal mengunggah chunk.');
+                    }
+
+                    // Jika chunk terakhir dan server sudah selesai memproses
+                    if (json.finished) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Berhasil Upload & Parsing',
+                            text: json.msg,
+                            confirmButtonColor: '#10b981'
+                        }).then(() => location.reload());
+                        return;
+                    }
+
+                } catch (err) {
+                    btnUpload.disabled = false;
+                    btnUpload.innerHTML = '<i class="ri-upload-cloud-line mr-1"></i> Upload File SQL';
+                    showError('Gagal Upload Chunk', err.toString());
+                    return;
                 }
-            })
-            .catch((err) => {
-                NProgress.done();
-                showError('Fetch Error', err.toString());
-            });
+            }
         });
     }
 
-    /* ============================================================
-       TOMBOL PREVIEW
-       ============================================================ */
+    // Tombol Preview & Clear Tetap Berfungsi Normal
     const btnPreview = document.getElementById('btnPreview');
     if (btnPreview) {
         btnPreview.addEventListener('click', function () {
@@ -309,22 +308,12 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    /* ============================================================
-       TOMBOL CLEAR BACKUP
-       ============================================================ */
     const btnClear = document.getElementById('btnClearBackup');
     if (btnClear) {
         btnClear.addEventListener('click', function () {
             Swal.fire({
                 icon: 'warning',
                 title: 'Kosongkan s_backup_raw?',
-                html:
-                    '<div style="text-align:left;font-size:13px;line-height:1.6">' +
-                    'Semua baris di <code style="background:#f1f5f9;padding:2px 4px;border-radius:3px">s_backup_raw</code> akan dihapus.' +
-                    '<div style="margin-top:10px;padding:8px;background:#fef3c7;border-left:3px solid #f59e0b;font-size:11px;color:#78350f">' +
-                    '<b>Catatan:</b> Identitas upload di <code>s_upload_batch</code> tetap tersimpan sebagai riwayat.' +
-                    '</div>' +
-                    '</div>',
                 showCancelButton: true,
                 confirmButtonText: 'Ya, Kosongkan',
                 cancelButtonText: 'Batal',
@@ -352,10 +341,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (json.ok) {
                         sessionStorage.removeItem('preview_data');
                         sessionStorage.removeItem('preview_data_ts');
-                        Swal.fire({
-                            icon: 'success', title: 'Berhasil', text: json.msg,
-                            confirmButtonColor: '#10b981'
-                        }).then(() => location.reload());
+                        Swal.fire({ icon: 'success', title: 'Berhasil', text: json.msg, confirmButtonColor: '#10b981' })
+                        .then(() => location.reload());
                     } else {
                         showError('Gagal', json.msg);
                     }
