@@ -244,27 +244,28 @@
  * path   : C:\xampp\htdocs\backuprm\actions\proses_preview_data.php
  * fungsi : Parse s_backup_raw → return statistik + sample 15 baris (dioptimasi agar tidak boros RAM)
  */
+// <?php
 declare(strict_types=1);
 
 require_once __DIR__ . '/../bootstrap/internal_guard.php';
 require_once BASE_PATH . '/core/parser_sql.php';
 
 csrf_check_or_die();
-set_time_limit(120);
-ini_set('memory_limit', '512M');
+set_time_limit(300); // Perpanjang waktu eksekusi
+ini_set('memory_limit', '1024M'); // Naikkan sedikit jika perlu
 
 if (!auth_check()) {
     json_response(['ok' => false, 'msg' => 'Unauthorized'], 401);
 }
 
-$rows = db()->query("SELECT id, source_row_id, raw_data FROM s_backup_raw ORDER BY id ASC")->fetchAll();
-
-if (!$rows) {
+// Cek dulu apakah ada data (gunakan COUNT agar ringan)
+$totalRows = (int)db()->query("SELECT COUNT(*) FROM s_backup_raw")->fetchColumn();
+if ($totalRows === 0) {
     json_response(['ok' => false, 'msg' => 'Tidak ada data di s_backup_raw.'], 400);
 }
 
 $stats = [
-    'raw_rows'           => count($rows),
+    'raw_rows'           => $totalRows,
     'm_pasien'           => 0,
     't_kunjungan'        => 0,
     't_pemeriksaan'      => 0,
@@ -278,7 +279,6 @@ $stats = [
     'skipped'            => 0,
 ];
 
-// Hanya simpan penampung sampel maksimal 15 baris per entitas agar tidak membebani memori
 $samples = [
     'm_pasien'           => [],
     't_kunjungan'        => [],
@@ -297,7 +297,9 @@ $seenKunjungan = [];
 $seenObat      = [];
 $seenTenaga    = [];
 
-foreach ($rows as $row) {
+// GANTI FETCHALL DENGAN CURSOR AGAR TIDAK MEMAKAN RAM BESAR
+$stmt = db()->query("SELECT id, source_row_id, raw_data FROM s_backup_raw ORDER BY id ASC");
+while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     $r = sql_parse_row($row['raw_data']);
 
     if (!sql_row_valid($r)) {
@@ -453,7 +455,7 @@ foreach ($rows as $row) {
     }
 }
 
-// Susun struktur format output agar tetap sesuai dengan ekspektasi fungsi render frontend
+// Susun struktur format output
 $sampleOutput = [];
 foreach ($stats as $key => $totalCount) {
     if ($key === 'raw_rows' || $key === 'skipped') continue;
