@@ -28,5 +28,5 @@ return [
     'reset-all'       => 'proses_reset_all.php',
     'mark-verified'   => 'proses_mark_verified.php',
     'download-backup' => 'proses_download_backup.php',
-    'upload-chunk' => 'proses_upload_chunk.php',
+    'upload-chunk'    => 'proses_upload_chunk.php',
 ];
