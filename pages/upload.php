@@ -195,7 +195,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const file = fileInput.files[0];
             const mode = document.getElementById('mode').value;
-            const CHUNK_SIZE = 512 * 1024;
+            const CHUNK_SIZE = 2 * 1024 * 1024; // 2 MB per chunk
             const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
             const uploadId = 'UP-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
 
