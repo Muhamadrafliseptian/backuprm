@@ -367,14 +367,96 @@ $countRaw = (int)db()->query("SELECT COUNT(*) FROM s_backup_raw")->fetchColumn()
     /* ============================================================
        HANDLE SIMPAN
        ============================================================ */
-    function handleSimpan(totalAll) {
+    // function handleSimpan(totalAll) {
+    //     Swal.fire({
+    //         icon: 'question',
+    //         title: 'Simpan ke Database?',
+    //         html: 'Anda akan menyimpan <b>' + totalAll.toLocaleString('id-ID') + '</b> baris ke database.<br><br>' +
+    //               '<small class="text-muted">Data duplikat akan dilewati otomatis.</small>',
+    //         showCancelButton: true,
+    //         confirmButtonText: 'Ya, Simpan',
+    //         cancelButtonText: 'Batal',
+    //         confirmButtonColor: '#10b981',
+    //         cancelButtonColor: '#7A8793',
+    //         reverseButtons: true
+    //     }).then(r => {
+    //         if (!r.isConfirmed) return;
+
+    //         Swal.fire({
+    //             title: 'Menyimpan...',
+    //             html: 'Mohon tunggu, jangan tutup halaman ini.',
+    //             allowOutsideClick: false,
+    //             allowEscapeKey: false,
+    //             didOpen: () => Swal.showLoading()
+    //         });
+
+    //         fetch(window.u('/actions/simpan-hasil'), {
+    //             method: 'POST',
+    //             headers: {
+    //                 'X-Requested-With': 'XMLHttpRequest',
+    //                 'X-CSRF-TOKEN': window.CSRF_TOKEN,
+    //                 'Content-Type': 'application/x-www-form-urlencoded'
+    //             }
+    //         })
+    //         .then(async (res) => {
+    //             const text = await res.text();
+    //             let json = null;
+    //             try { json = JSON.parse(text); }
+    //             catch (e) {
+    //                 return Swal.fire({
+    //                     icon: 'error',
+    //                     title: 'Response bukan JSON',
+    //                     html: '<pre style="text-align:left;font-size:11px;max-height:300px;overflow:auto">' +
+    //                           escapeHtml(text.substring(0, 2000)) + '</pre>',
+    //                     width: 700
+    //                 });
+    //             }
+
+    //             if (json.ok) {
+    //                 sessionStorage.removeItem('preview_data');
+    //                 sessionStorage.removeItem('preview_data_ts');
+    //                 Swal.fire({
+    //                     icon: 'success',
+    //                     title: 'Berhasil!',
+    //                     html: 'Data berhasil disimpan.<br><br>' +
+    //                           '<small class="text-muted">Pasien: ' + (json.stats.m_pasien || 0) +
+    //                           ', Kunjungan: ' + (json.stats.t_kunjungan || 0) + '</small>',
+    //                     confirmButtonColor: '#10b981',
+    //                     confirmButtonText: 'Lihat Dashboard'
+    //                 }).then(() => {
+    //                     window.location.href = window.u('dashboard');
+    //                 });
+    //             } else {
+    //                 Swal.fire({
+    //                     icon: 'error',
+    //                     title: 'Gagal',
+    //                     text: json.msg || 'Terjadi kesalahan.',
+    //                     confirmButtonColor: '#10b981'
+    //                 });
+    //             }
+    //         })
+    //         .catch(() => {
+    //             Swal.fire({
+    //                 icon: 'error',
+    //                 title: 'Kesalahan Jaringan',
+    //                 text: 'Tidak dapat menghubungi server.',
+    //                 confirmButtonColor: '#10b981'
+    //             });
+    //         });
+    //     });
+    // }
+
+    /* ============================================================
+       HANDLE SIMPAN (DENGAN CHUNKED/BATCH PROCESS)
+       ============================================================ */
+       function handleSimpan(totalAll) {
         Swal.fire({
             icon: 'question',
             title: 'Simpan ke Database?',
-            html: 'Anda akan menyimpan <b>' + totalAll.toLocaleString('id-ID') + '</b> baris ke database.<br><br>' +
-                  '<small class="text-muted">Data duplikat akan dilewati otomatis.</small>',
+            html: 'Anda akan menyimpan <b>' + totalAll.toLocaleString('id-ID') + '</b> baris ke database secara bertahap.<br><br>' +
+                  '<small class="text-muted">Proses ini aman dari timeout server.</small>',
             showCancelButton: true,
-            confirmButtonText: 'Ya, Simpan',
+            confirmButtonText: 'Ya, Mulai Simpan',
             cancelButtonText: 'Batal',
             confirmButtonColor: '#10b981',
             cancelButtonColor: '#7A8793',
@@ -382,66 +464,79 @@ $countRaw = (int)db()->query("SELECT COUNT(*) FROM s_backup_raw")->fetchColumn()
         }).then(r => {
             if (!r.isConfirmed) return;
 
+            // Tampilkan modal progress
             Swal.fire({
-                title: 'Menyimpan...',
-                html: 'Mohon tunggu, jangan tutup halaman ini.',
+                title: 'Menyimpan Data...',
+                html: 'Memproses baris: <b id="progressCount">0</b> dari ' + totalAll.toLocaleString('id-ID'),
                 allowOutsideClick: false,
                 allowEscapeKey: false,
-                didOpen: () => Swal.showLoading()
+                didOpen: () => {
+                    Swal.showLoading();
+                    sendBatchSimpan(0, totalAll, {});
+                }
             });
+        });
+    }
 
-            fetch(window.u('/actions/simpan-hasil'), {
-                method: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': window.CSRF_TOKEN,
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                }
-            })
-            .then(async (res) => {
-                const text = await res.text();
-                let json = null;
-                try { json = JSON.parse(text); }
-                catch (e) {
-                    return Swal.fire({
-                        icon: 'error',
-                        title: 'Response bukan JSON',
-                        html: '<pre style="text-align:left;font-size:11px;max-height:300px;overflow:auto">' +
-                              escapeHtml(text.substring(0, 2000)) + '</pre>',
-                        width: 700
-                    });
-                }
+    function sendBatchSimpan(offset, totalAll, accumulatedStats) {
+        fetch(window.u('/actions/simpan-hasil'), {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': window.CSRF_TOKEN,
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: 'offset=' + offset
+        })
+        .then(async (res) => {
+            const text = await res.text();
+            let json = null;
+            try { json = JSON.parse(text); }
+            catch (e) {
+                throw new Error('Response bukan JSON: ' + text.substring(0, 200));
+            }
 
-                if (json.ok) {
-                    sessionStorage.removeItem('preview_data');
-                    sessionStorage.removeItem('preview_data_ts');
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Berhasil!',
-                        html: 'Data berhasil disimpan.<br><br>' +
-                              '<small class="text-muted">Pasien: ' + (json.stats.m_pasien || 0) +
-                              ', Kunjungan: ' + (json.stats.t_kunjungan || 0) + '</small>',
-                        confirmButtonColor: '#10b981',
-                        confirmButtonText: 'Lihat Dashboard'
-                    }).then(() => {
-                        window.location.href = window.u('dashboard');
-                    });
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Gagal',
-                        text: json.msg || 'Terjadi kesalahan.',
-                        confirmButtonColor: '#10b981'
-                    });
-                }
-            })
-            .catch(() => {
+            if (!json.ok) {
+                throw new Error(json.msg || 'Terjadi kesalahan.');
+            }
+
+            // Akumulasi statistik
+            for (let k in json.stats) {
+                accumulatedStats[k] = (accumulatedStats[k] || 0) + json.stats[k];
+            }
+
+            // Update teks progress di modal
+            const progEl = document.getElementById('progressCount');
+            if (progEl) {
+                progEl.textContent = json.processed.toLocaleString('id-ID');
+            }
+
+            if (!json.finished) {
+                // Lanjut ke batch berikutnya
+                sendBatchSimpan(json.processed, totalAll, accumulatedStats);
+            } else {
+                // Selesai sepenuhnya
+                sessionStorage.removeItem('preview_data');
+                sessionStorage.removeItem('preview_data_ts');
                 Swal.fire({
-                    icon: 'error',
-                    title: 'Kesalahan Jaringan',
-                    text: 'Tidak dapat menghubungi server.',
-                    confirmButtonColor: '#10b981'
+                    icon: 'success',
+                    title: 'Berhasil Disimpan!',
+                    html: 'Seluruh data berhasil disimpan ke database.<br><br>' +
+                          '<small class="text-muted">Total Pasien Baru: ' + (accumulatedStats.m_pasien || 0) +
+                          ', Kunjungan: ' + (accumulatedStats.t_kunjungan || 0) + '</small>',
+                    confirmButtonColor: '#10b981',
+                    confirmButtonText: 'Lihat Dashboard'
+                }).then(() => {
+                    window.location.href = window.u('dashboard');
                 });
+            }
+        })
+        .catch(err => {
+            Swal.fire({
+                icon: 'error',
+                title: 'Gagal Menyimpan',
+                text: err.message,
+                confirmButtonColor: '#10b981'
             });
         });
     }

@@ -231,7 +231,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 progressText.innerText = `Mengunggah bagian ${currentChunk + 1} dari ${totalChunks}...`;
 
                 try {
-                    const response = await fetch(window.u('/rekam-medis/actions/upload-chunk'), {
+                    const response = await fetch(window.u('/actions/upload-chunk'), {
                         method: 'POST',
                         headers: {
                             'X-Requested-With': 'XMLHttpRequest',
