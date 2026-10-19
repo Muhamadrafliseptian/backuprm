@@ -84,11 +84,7 @@ if (!function_exists('nav_icon_multi')) {
         </div>
 
         <!-- Navigation -->
-        <nav class="px-3 mt-6 space-y-1">
-
-            <!-- ============================================================
-                 1. UTAMA
-                 ============================================================ -->
+        <!-- <nav class="px-3 mt-6 space-y-1">
             <div class="px-3.5 pb-2 text-[10.5px] uppercase tracking-wider text-slate-400 font-bold">
                 Utama
             </div>
@@ -96,10 +92,6 @@ if (!function_exists('nav_icon_multi')) {
                 <i class="ri-dashboard-3-line <?= nav_icon('dashboard', $__page) ?>"></i>
                 <span>Dashboard</span>
             </a>
-
-            <!-- ============================================================
-                 2. ALUR KERJA (Upload → Preview → Verifikasi)
-                 ============================================================ -->
             <div class="px-3.5 pt-4 pb-2 text-[10.5px] uppercase tracking-wider text-slate-400 font-bold">
                 Alur Kerja
             </div>
@@ -112,9 +104,6 @@ if (!function_exists('nav_icon_multi')) {
                 <span>Verifikasi</span>
             </a>
 
-            <!-- ============================================================
-                 3. DATA (hasil simpan)
-                 ============================================================ -->
             <div class="px-3.5 pt-4 pb-2 text-[10.5px] uppercase tracking-wider text-slate-400 font-bold">
                 Data
             </div>
@@ -138,10 +127,6 @@ if (!function_exists('nav_icon_multi')) {
                 <i class="ri-user-heart-line <?= nav_icon('tenaga-kesehatan', $__page) ?>"></i>
                 <span>Tenaga Kesehatan</span>
             </a>
-
-            <!-- ============================================================
-                 4. SISTEM
-                 ============================================================ -->
             <div class="px-3.5 pt-4 pb-2 text-[10.5px] uppercase tracking-wider text-slate-400 font-bold">
                 Sistem
             </div>
@@ -161,6 +146,100 @@ if (!function_exists('nav_icon_multi')) {
 					<i class="ri-information-line <?= nav_icon('about', $__page) ?>"></i>
 					<span>Tentang</span>
 				</a>
+        </nav> -->
+        <!-- Navigation -->
+        <!-- Navigation -->
+        <nav class="px-3 mt-6 space-y-1">
+
+            <?php 
+            $roleUser = $__u['peg_role'] ?? $__u['role'] ?? 'user';
+            $isAdmin  = ($roleUser === ROLE_ADMIN);
+            $isDokter = ($roleUser === ROLE_DOKTER);
+            ?>
+
+            <!-- ============================================================
+                 1. UTAMA
+                 ============================================================ -->
+            <div class="px-3.5 pb-2 text-[10.5px] uppercase tracking-wider text-slate-400 font-bold">
+                Utama
+            </div>
+            <a href="<?= base_url('dashboard') ?>" class="<?= nav_active('dashboard', $__page) ?>">
+                <i class="ri-dashboard-3-line <?= nav_icon('dashboard', $__page) ?>"></i>
+                <span>Dashboard</span>
+            </a>
+
+            <?php if ($isAdmin): ?>
+            <!-- ============================================================
+                 2. ALUR KERJA (Hanya Admin)
+                 ============================================================ -->
+            <div class="px-3.5 pt-4 pb-2 text-[10.5px] uppercase tracking-wider text-slate-400 font-bold">
+                Alur Kerja
+            </div>
+            <a href="<?= base_url('upload') ?>" class="<?= nav_active_multi(['upload', 'generate'], $__page) ?>">
+                <i class="ri-cloud-line <?= nav_icon_multi(['upload', 'generate'], $__page) ?>"></i>
+                <span>Upload &amp; Proses</span>
+            </a>
+            <a href="<?= base_url('verifikasi') ?>" class="<?= nav_active('verifikasi', $__page) ?>">
+                <i class="ri-shield-check-line <?= nav_icon('verifikasi', $__page) ?>"></i>
+                <span>Verifikasi</span>
+            </a>
+            <?php endif; ?>
+
+            <!-- ============================================================
+                 3. DATA (Admin & Dokter)
+                 ============================================================ -->
+            <div class="px-3.5 pt-4 pb-2 text-[10.5px] uppercase tracking-wider text-slate-400 font-bold">
+                Data
+            </div>
+            <a href="<?= base_url('pasien') ?>" class="<?= nav_active('pasien', $__page) ?>">
+                <i class="ri-group-line <?= nav_icon('pasien', $__page) ?>"></i>
+                <span>Pasien</span>
+            </a>
+            <a href="<?= base_url('kunjungan') ?>" class="<?= nav_active('kunjungan', $__page) ?>">
+                <i class="ri-calendar-check-line <?= nav_icon('kunjungan', $__page) ?>"></i>
+                <span>Kunjungan</span>
+            </a>
+            <a href="<?= base_url('laboratorium') ?>" class="<?= nav_active('laboratorium', $__page) ?>">
+                <i class="ri-flask-line <?= nav_icon('laboratorium', $__page) ?>"></i>
+                <span>Laboratorium</span>
+            </a>
+
+            <?php if ($isAdmin): ?>
+            <a href="<?= base_url('obat') ?>" class="<?= nav_active('obat', $__page) ?>">
+                <i class="ri-capsule-line <?= nav_icon('obat', $__page) ?>"></i>
+                <span>Obat</span>
+            </a>
+            <a href="<?= base_url('tenaga-kesehatan') ?>" class="<?= nav_active('tenaga-kesehatan', $__page) ?>">
+                <i class="ri-user-heart-line <?= nav_icon('tenaga-kesehatan', $__page) ?>"></i>
+                <span>Tenaga Kesehatan</span>
+            </a>
+            <?php endif; ?>
+
+            <!-- ============================================================
+                 4. SISTEM (Hanya Admin)
+                 ============================================================ -->
+            <?php if ($isAdmin): ?>
+            <div class="px-3.5 pt-4 pb-2 text-[10.5px] uppercase tracking-wider text-slate-400 font-bold">
+                Sistem
+            </div>
+            <a href="<?= base_url('log') ?>" class="<?= nav_active('log', $__page) ?>">
+                <i class="ri-file-list-line <?= nav_icon('log', $__page) ?>"></i>
+                <span>Log Aktivitas</span>
+            </a>
+            <a href="<?= base_url('backup-all') ?>" class="<?= nav_active('backup-all', $__page) ?>">
+                <i class="ri-download-cloud-2-line <?= nav_icon('backup-all', $__page) ?>"></i>
+                <span>Backup All Record DB</span>
+            </a>
+            <a href="<?= base_url('akun') ?>" class="<?= nav_active('akun', $__page) ?>">
+                <i class="ri-team-line <?= nav_icon('akun', $__page) ?>"></i>
+                <span>Manajemen Akun</span>
+            </a>
+            <?php endif; ?>
+
+            <a href="<?= base_url('about') ?>" class="<?= nav_active('about', $__page) ?>">
+                <i class="ri-information-line <?= nav_icon('about', $__page) ?>"></i>
+                <span>Tentang</span>
+            </a>
         </nav>
     </div>
 

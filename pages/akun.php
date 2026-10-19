@@ -41,7 +41,7 @@ if (is_post() && ($_POST['aksi'] ?? '') === 'tambah') {
     if ($nrk === '')                    $__errors[] = 'NRK wajib diisi.';
     if ($nama === '')                   $__errors[] = 'Nama wajib diisi.';
     if (mb_strlen($password) < 8)        $__errors[] = 'Password minimal 8 karakter.';
-    if (!in_array($role, [ROLE_ADMIN, ROLE_USER], true))
+    if (!in_array($role, [ROLE_ADMIN, ROLE_USER, ROLE_DOKTER], true))
                                         $__errors[] = 'Role tidak valid.';
     if ($nrk !== '' && !ctype_digit($nrk))
                                         $__errors[] = 'NRK hanya boleh angka.';
@@ -148,7 +148,7 @@ if (is_post() && ($_POST['aksi'] ?? '') === 'toggle-role') {
 
     $pegId = (int)($_POST['peg_id'] ?? 0);
     $role  = (string)($_POST['role'] ?? ROLE_USER);
-    if (!in_array($role, [ROLE_ADMIN, ROLE_USER], true)) $role = ROLE_USER;
+    if (!in_array($role, [ROLE_ADMIN, ROLE_USER, ROLE_DOKTER], true)) $role = ROLE_USER;
 
     // Jangan biarkan admin terakhir menurunkan sendiri aksesnya
     if ($pegId === (int)($_SESSION['user']['id'] ?? 0) && $role !== ROLE_ADMIN) {
@@ -263,6 +263,7 @@ require BASE_PATH . '/layouts/sidebar.php';
                             class="mt-1.5 w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-mint-500 focus:ring-4 focus:ring-mint-500/10">
                         <option value="<?= e(ROLE_USER) ?>">User</option>
                         <option value="<?= e(ROLE_ADMIN) ?>">Admin</option>
+                        <option value="<?= e(ROLE_DOKTER) ?>">Dokter</option>
                     </select>
                 </label>
 

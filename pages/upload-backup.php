@@ -5,7 +5,11 @@
  * fungsi : Upload file SQL + preview + clear (versi sederhana)
  */
 declare(strict_types=1);
-
+if (!auth_check() || auth_role() !== ROLE_ADMIN) {
+    http_response_code(403);
+    require BASE_PATH . '/pages/403.php';
+    exit;
+}
 require_once __DIR__ . '/../bootstrap/internal_guard.php';
 
 require BASE_PATH . '/layouts/header.php';

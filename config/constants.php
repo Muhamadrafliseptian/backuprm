@@ -25,6 +25,7 @@ define('UPLOAD_MAX_SIZE', (int) env('UPLOAD_MAX_SIZE', 52428800));
 
 define('ROLE_ADMIN', 'admin');
 define('ROLE_USER',  'user');
+define('ROLE_DOKTER',  'dokter');
 
 define('LOG_ACTIVITY', PATH_LOGS . '/activity.log');
 define('LOG_ERROR',    PATH_LOGS . '/error.log');
