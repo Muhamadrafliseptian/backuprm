@@ -120,3 +120,7 @@
 [2026-10-19 13:43:38] [::1] [8813084] [INFO] login | Berhasil login: 8813084
 [2026-10-19 13:46:49] [::1] [8813084] [INFO] logout | User logout (manual): 8813084
 [2026-10-19 13:46:59] [::1] [123456] [INFO] login | Berhasil login: 123456
+[2026-10-19 14:08:08] [::1] [123456] [INFO] logout | User logout (manual): 123456
+[2026-10-19 14:09:48] [::1] [8813084] [INFO] login | Berhasil login: 8813084
+[2026-10-19 14:10:09] [::1] [8813084] [INFO] upload_chunk_sql | Upload Chunk backup_rajal_dinkes_2026_2021-01-01_sampai_2021-01-31.sql: mode=replace, 19125 baris, batch=BATCH-20261019-141006-92879d
+[2026-10-19 14:10:22] [::1] [8813084] [INFO] preview_data | Preview cepat sukses diproses.
