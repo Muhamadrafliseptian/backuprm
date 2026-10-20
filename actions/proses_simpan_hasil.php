@@ -6,8 +6,7 @@ require_once BASE_PATH . '/core/parser_sql.php';
 
 csrf_check_or_die();
 set_time_limit(300); // Naikkan batas waktu sedikit per batch
-false_memory_limit = ini_set('memory_limit', '1024M');
-
+ini_set('memory_limit', '1024M');
 if (!auth_check()) {
     json_response(['ok' => false, 'msg' => 'Unauthorized'], 401);
 }
