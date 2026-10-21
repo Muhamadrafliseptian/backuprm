@@ -2,7 +2,7 @@
 /**
 - file   : pages/upload.php
 - path   : C:\xampp\htdocs\backuprm\pages\upload.php
-- fungsi : Upload file SQL via Chunked Upload (Frontend) + Auto Parse setelah gabung + preview + clear
+- fungsi : Upload File SQL besar (>1GB) dengan AUTO-SPLIT di browser per 100MB + Instant Parsing per Batch
  */
 declare(strict_types=1);
 
@@ -16,28 +16,22 @@ require BASE_PATH . '/layouts/header.php';
 require BASE_PATH . '/layouts/sidebar.php';
 
 $pdo = db();
-
 $countRaw = (int)$pdo->query("SELECT COUNT(*) FROM s_backup_raw")->fetchColumn();
 
-/* Riwayat 10 batch terakhir */
 $recentBatches = [];
 try {
     $recentBatches =$pdo->query("
-        SELECT batch_id, uploaded_at, uploaded_by_nama,
-               file_name, imported_rows, status
-        FROM s_upload_batch
-        ORDER BY uploaded_at DESC
-        LIMIT 10
+        SELECT batch_id, uploaded_at, uploaded_by_nama, file_name, imported_rows, status
+        FROM s_upload_batch ORDER BY uploaded_at DESC LIMIT 10
     ")->fetchAll();
-} catch (Throwable $e) {$recentBatches = [];
-}
+} catch (Throwable $e) {$recentBatches = []; }
 ?>
 
 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 fade-in-up">
     <div>
         <h2 class="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">Upload Backup</h2>
         <p class="text-xs md:text-sm text-slate-500">
-            Upload file <code class="text-mint-600 bg-mint-50 px-1.5 py-0.5 rounded">.sql</code> ukuran besar secara bertahap.
+            Auto-Split file <code class="text-mint-600 bg-mint-50 px-1.5 py-0.5 rounded">.sql</code> raksasa (>1 GB) langsung di aplikasi tanpa software eksternal.
         </p>
     </div>
 </div>
@@ -45,7 +39,7 @@ try {
 <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mt-4">
     <div class="p-5 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
         <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
-            <i class="ri-upload-cloud-line text-mint-600"></i> Upload File SQL (Chunked)
+            <i class="ri-upload-cloud-line text-mint-600"></i> Auto-Split &amp; Process Importer
         </h3>
         <?php if ($countRaw > 0): ?>
         <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
@@ -58,26 +52,26 @@ try {
             <?= csrf_field() ?>
 
             <div>
-                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Pilih File SQL</label>
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Pilih File SQL Asli (misal 1.4 GB)</label>
                 <input type="file" name="sql_file" id="sql_file" accept=".sql" required
                        class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-mint-100 file:text-mint-700 file:text-xs file:font-semibold hover:file:bg-mint-200 focus:bg-white focus:border-mint-500 focus:ring-2 focus:ring-mint-100 focus:outline-none transition-all">
                 <p class="text-[11px] text-slate-400 mt-1">
-                    Mendukung file besar (>1 GB) tanpa risiko timeout.
+                    Aplikasi akan memotong file ini secara internal menjadi bagian 100MB dan memprosesnya bertahap.
                 </p>
             </div>
 
             <div>
                 <label class="block text-xs font-semibold text-slate-700 mb-1.5">Mode Import</label>
                 <select name="mode" id="mode" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:bg-white focus:border-mint-500 focus:ring-2 focus:ring-mint-100 focus:outline-none transition-all">
-                    <option value="replace">Ganti (kosongkan s_backup_raw dulu)</option>
-                    <option value="append">Tambah (append ke data yang ada)</option>
+                    <option value="replace">Ganti (Kosongkan s_backup_raw dulu)</option>
+                    <option value="append">Tambah (Append ke data yang ada)</option>
                 </select>
             </div>
 
-            <!-- Progress Bar Sederhana -->
+            <!-- Progress Bar Baris & Bagian -->
             <div id="progressWrapper" class="hidden space-y-1">
                 <div class="flex justify-between text-xs text-slate-600 font-semibold">
-                    <span id="progressText">Mengunggah...</span>
+                    <span id="progressText">Menyiapkan pemotongan file...</span>
                     <span id="progressPercent">0%</span>
                 </div>
                 <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
@@ -88,7 +82,7 @@ try {
             <div class="flex flex-col sm:flex-row gap-2 pt-2">
                 <button type="submit" id="btnUpload"
                         class="flex-1 bg-mint-500 hover:bg-mint-600 text-white text-xs font-bold px-4 py-3 rounded-xl transition-all shadow-md shadow-mint-500/20 active:scale-95">
-                    <i class="ri-upload-cloud-line mr-1"></i> Upload File SQL
+                    <i class="ri-upload-cloud-line mr-1"></i> Mulai Auto-Split &amp; Import
                 </button>
                 <?php if ($countRaw > 0): ?>
                 <button type="button" id="btnPreview"
@@ -105,7 +99,7 @@ try {
     </div>
 </div>
 
-<!-- Bagian Tabel Riwayat Upload -->
+<!-- Riwayat Upload -->
 <?php if ($recentBatches): ?>
 <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mt-6">
     <div class="p-5 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
@@ -113,8 +107,7 @@ try {
             <i class="ri-history-line text-mint-600 text-lg"></i>
             <h3 class="font-bold text-slate-900 text-base">Riwayat Upload</h3>
         </div>
-        <a href="<?= base_url('verifikasi') ?>"
-           class="text-[11px] font-semibold text-mint-600 hover:text-mint-700 flex items-center gap-1">
+        <a href="<?= base_url('verifikasi') ?>" class="text-[11px] font-semibold text-mint-600 hover:text-mint-700 flex items-center gap-1">
             Lihat Semua <i class="ri-arrow-right-line"></i>
         </a>
     </div>
@@ -133,17 +126,9 @@ try {
             </thead>
             <tbody class="divide-y divide-slate-100 font-medium text-slate-600">
             <?php foreach ($recentBatches as$b):
-                if (in_array($b['status'], ['generated', 'verified'], true)) {$rowClass    = 'bg-mint-50/20';
-                    $statusBadge = 'bg-mint-50 text-mint-700 border-mint-200/60';$statusText  = 'SUDAH DI-UPLOAD';
-                    $statusIcon  = 'ri-checkbox-circle-fill';$actionHtml  = '<a href="' . base_url('verifikasi?batch=' . urlencode($b['batch_id'])) . '" class="inline-flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold text-mint-700 bg-mint-50 hover:bg-mint-100 border border-mint-200 rounded-lg transition-colors"><i class="ri-shield-check-line"></i> Verifikasi</a>';
-                } elseif ($b['status'] === 'uploaded') {$rowClass    = 'bg-amber-50/30';
-                    $statusBadge = 'bg-amber-50 text-amber-700 border-amber-200/60';$statusText  = 'BELUM DI-UPLOAD';
-                    $statusIcon  = 'ri-time-line';$actionHtml  = '<a href="' . base_url('generate') . '" class="inline-flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-colors"><i class="ri-magic-line"></i> Preview &amp; Simpan</a>';
-                } else {
-                    $rowClass    = '';$statusBadge = 'bg-slate-50 text-slate-600 border-slate-200';
-                    $statusText  = strtoupper($b['status']);
-                    $statusIcon  = 'ri-information-line';$actionHtml  = '<a href="' . base_url('verifikasi?batch=' . urlencode($b['batch_id'])) . '" class="inline-flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors"><i class="ri-information-line"></i> Detail</a>';
-                }
+                $isDone = in_array($b['status'], ['generated', 'verified'], true);
+                $rowClass =$isDone ? 'bg-mint-50/20' : ($b['status'] === 'uploaded' ? 'bg-amber-50/30' : '');$statusBadge = $isDone ? 'bg-mint-50 text-mint-700 border-mint-200/60' : ($b['status'] === 'uploaded' ? 'bg-amber-50 text-amber-700 border-amber-200/60' : 'bg-slate-50 text-slate-600 border-slate-200');
+                $statusText =$isDone ? 'SUDAH DI-UPLOAD' : ($b['status'] === 'uploaded' ? 'BELUM DI-UPLOAD' : strtoupper($b['status']));$statusIcon = $isDone ? 'ri-checkbox-circle-fill' : ($b['status'] === 'uploaded' ? 'ri-time-line' : 'ri-information-line');
             ?>
                 <tr class="hover:bg-slate-50/80 transition-colors <?= $rowClass ?>">
                     <td class="py-3 px-4"><code class="text-mint-700 font-semibold text-[10px]"><?= e($b['batch_id']) ?></code></td>
@@ -156,7 +141,13 @@ try {
                             <i class="<?= $statusIcon ?>"></i> <?= e($statusText) ?>
                         </span>
                     </td>
-                    <td class="py-3 px-4 text-right"><?= $actionHtml ?></td>
+                    <td class="py-3 px-4 text-right">
+                        <?php if ($b['status'] === 'uploaded'): ?>
+                            <a href="<?= base_url('generate') ?>" class="inline-flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-colors"><i class="ri-magic-line"></i> Preview &amp; Simpan</a>
+                        <?php else: ?>
+                            <a href="<?= base_url('verifikasi?batch=' . urlencode($b['batch_id'])) ?>" class="inline-flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold text-mint-700 bg-mint-50 hover:bg-mint-100 border border-mint-200 rounded-lg transition-colors"><i class="ri-shield-check-line"></i> Detail</a>
+                        <?php endif; ?>
+                    </td>
                 </tr>
             <?php endforeach; ?>
             </tbody>
@@ -187,7 +178,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     /* ============================================================
-       CHUNKS UPLOAD LOGIC (FRONTEND) + AUTO PARSE
+       IN-BROWSER AUTO-SPLIT IMPORTER (VIRTUAL SLICE 100MB)
        ============================================================ */
     const formUpload = document.getElementById('formUpload');
     if (formUpload) {
@@ -198,10 +189,11 @@ document.addEventListener('DOMContentLoaded', function () {
             if (fileInput.files.length === 0) return;
 
             const file = fileInput.files[0];
-            const mode = document.getElementById('mode').value;
-            const CHUNK_SIZE = 2 * 1024 * 1024; // 2 MB per chunk
-            const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-            const uploadId = 'UP-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
+            const initialMode = document.getElementById('mode').value;
+
+            // Ukuran per bagian dipotong di browser: 100 MB
+            const SPLIT_SIZE = 100 * 1024 * 1024;
+            const totalParts = Math.ceil(file.size / SPLIT_SIZE);
 
             const progressWrapper = document.getElementById('progressWrapper');
             const progressBar = document.getElementById('progressBar');
@@ -211,103 +203,100 @@ document.addEventListener('DOMContentLoaded', function () {
 
             progressWrapper.classList.remove('hidden');
             btnUpload.disabled = true;
-            btnUpload.innerHTML = '<i class="ri-loader-4-line animate-spin mr-1"></i> Mengunggah...';
 
-            for (let currentChunk = 0; currentChunk < totalChunks; currentChunk++) {
-                const start = currentChunk * CHUNK_SIZE;
-                const end = Math.min(start + CHUNK_SIZE, file.size);
-                const chunk = file.slice(start, end);
+            for (let partIndex = 0; partIndex < totalParts; partIndex++) {
+                const startByte = partIndex * SPLIT_SIZE;
+                const endByte = Math.min(startByte + SPLIT_SIZE, file.size);
+                
+                // Potong virtual file langsung di memori browser
+                const partBlob = file.slice(startByte, endByte);
+                const partName = `${file.name}.part${partIndex + 1}`;
+                const currentMode = (partIndex === 0) ? initialMode : 'append';
 
-                const fd = new FormData();
-                fd.append('sql_chunk', chunk);
-                fd.append('chunk_index', currentChunk);
-                fd.append('total_chunks', totalChunks);
-                fd.append('upload_id', uploadId);
-                fd.append('file_name', file.name);
-                fd.append('mode', mode);
-
-                let percent = Math.round(((currentChunk + 1) / totalChunks) * 100);
+                let percent = Math.round(((partIndex) / totalParts) * 100);
                 progressBar.style.width = percent + '%';
                 progressPercent.innerText = percent + '%';
-                progressText.innerText = `Mengunggah bagian ${currentChunk + 1} dari ${totalChunks}...`;
+                progressText.innerText = `Memproses Bagian ${partIndex + 1} dari ${totalParts} (${Math.round((endByte - startByte)/1024/1024)} MB)...`;
+
+                // Kirim bagian 100MB ini via Chunk Upload biasa
+                const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB per transmisi
+                const totalChunks = Math.ceil(partBlob.size / CHUNK_SIZE);
+                const uploadId = 'UP-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
 
                 try {
-                    const response = await fetch(window.u('/actions/upload-chunk'), {
-                        method: 'POST',
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest',
-                            'X-CSRF-TOKEN': window.CSRF_TOKEN
-                        },
-                        body: fd
-                    });
+                    for (let c = 0; c < totalChunks; c++) {
+                        const cStart = c * CHUNK_SIZE;
+                        const cEnd = Math.min(cStart + CHUNK_SIZE, partBlob.size);
+                        const chunkData = partBlob.slice(cStart, cEnd);
 
-                    const text = await response.text();
-                    let json;
-                    try {
-                        json = JSON.parse(text);
-                    } catch (err) {
-                        throw new Error('Response bukan JSON: ' + text);
-                    }
+                        const fd = new FormData();
+                        fd.append('sql_chunk', chunkData);
+                        fd.append('chunk_index', c);
+                        fd.append('total_chunks', totalChunks);
+                        fd.append('upload_id', uploadId);
+                        fd.append('file_name', partName);
+                        fd.append('mode', currentMode);
 
-                    if (!json.ok) {
-                        throw new Error(json.msg || 'Gagal mengunggah chunk.');
-                    }
-
-                    // Jika chunk terakhir selesai digabung, lanjutkan ke proses parsing database
-                    if (json.finished) {
-                        progressText.innerText = 'Mengurai dan menyimpan data ke database...';
-                        NProgress.start();
-
-                        const parseFd = new FormData();
-                        parseFd.append('upload_id', json.upload_id);
-                        parseFd.append('file_name', json.file_name);
-                        parseFd.append('file_path', json.file_path);
-                        parseFd.append('mode', json.mode);
-
-                        const parseRes = await fetch(window.u('/actions/parse-sql-file'), {
+                        const res = await fetch(window.u('/actions/upload-chunk'), {
                             method: 'POST',
                             headers: {
                                 'X-Requested-With': 'XMLHttpRequest',
                                 'X-CSRF-TOKEN': window.CSRF_TOKEN
                             },
-                            body: parseFd
+                            body: fd
                         });
 
-                        const parseText = await parseRes.text();
-                        let parseJson;
-                        try {
-                            parseJson = JSON.parse(parseText);
-                        } catch (err) {
-                            throw new Error('Response parse bukan JSON: ' + parseText);
-                        }
+                        const text = await res.text();
+                        let json = JSON.parse(text);
+                        if (!json.ok) throw new Error(json.msg || 'Gagal upload kepingan.');
 
-                        NProgress.done();
-                        if (!parseJson.ok) {
-                            throw new Error(parseJson.msg || 'Gagal memproses file SQL ke database.');
-                        }
+                        // Setelah bagian 100MB selesai digabung di server, langsung jalankan parsing
+                        if (json.finished) {
+                            progressText.innerText = `Mengurai Bagian ${partIndex + 1} ke database...`;
 
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Berhasil Upload & Parsing',
-                            text: parseJson.msg,
-                            confirmButtonColor: '#10b981'
-                        }).then(() => location.reload());
-                        return;
+                            const parseFd = new FormData();
+                            parseFd.append('upload_id', json.upload_id);
+                            parseFd.append('file_name', json.file_name);
+                            parseFd.append('mode', json.mode);
+
+                            const parseRes = await fetch(window.u('/actions/parse-sql-file'), {
+                                method: 'POST',
+                                headers: {
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'X-CSRF-TOKEN': window.CSRF_TOKEN
+                                },
+                                body: parseFd
+                            });
+
+                            const parseText = await parseRes.text();
+                            let parseJson = JSON.parse(parseText);
+
+                            if (!parseJson.ok) throw new Error(parseJson.msg || 'Gagal mengurai database.');
+                        }
                     }
-
                 } catch (err) {
                     btnUpload.disabled = false;
-                    btnUpload.innerHTML = '<i class="ri-upload-cloud-line mr-1"></i> Upload File SQL';
+                    btnUpload.innerHTML = '<i class="ri-upload-cloud-line mr-1"></i> Mulai Auto-Split &amp; Import';
                     progressWrapper.classList.add('hidden');
-                    NProgress.done();
-                    showError('Gagal Proses', err.toString());
+                    showError(`Gagal pada bagian ${partIndex + 1}`, err.toString());
                     return;
                 }
             }
+
+            progressBar.style.width = '100%';
+            progressPercent.innerText = '100%';
+            progressText.innerText = 'Seluruh file 1.4 GB selesai diproses!';
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Berhasil Memproses File 1.4 GB!',
+                text: `File telah dipotong otomatis menjadi ${totalParts} bagian dan tersimpan di s_backup_raw.`,
+                confirmButtonColor: '#10b981'
+            }).then(() => location.reload());
         });
     }
 
-    // Tombol Preview & Clear
+    // Preview & Clear
     const btnPreview = document.getElementById('btnPreview');
     if (btnPreview) {
         btnPreview.addEventListener('click', function () {
@@ -323,10 +312,7 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(async (r) => {
                 NProgress.done();
                 const text = await r.text();
-                let json = null;
-                try { json = JSON.parse(text); }
-                catch (err) { return showError('Response bukan JSON', text); }
-
+                let json = JSON.parse(text);
                 if (json.ok) {
                     sessionStorage.setItem('preview_data', JSON.stringify(json));
                     sessionStorage.setItem('preview_data_ts', Date.now().toString());
@@ -368,10 +354,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 .then(async (res) => {
                     NProgress.done();
                     const text = await res.text();
-                    let json = null;
-                    try { json = JSON.parse(text); }
-                    catch (err) { return showError('Response bukan JSON', text); }
-
+                    let json = JSON.parse(text);
                     if (json.ok) {
                         sessionStorage.removeItem('preview_data');
                         sessionStorage.removeItem('preview_data_ts');
