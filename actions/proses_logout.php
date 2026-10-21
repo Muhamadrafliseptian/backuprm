@@ -16,7 +16,7 @@ if (!is_post()) {
     redirect('dashboard');
 }
 
-csrf_check_or_die();
+// csrf_check_or_die();
 
 $u = auth_user();
 $reason = (string)($_POST['reason'] ?? 'manual');

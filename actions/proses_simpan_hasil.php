@@ -1,7 +1,7 @@
 <?php
 /**
  * file   : actions/simpan-hasil.php
- * fungsi : Menyimpan data s_backup_raw ke tabel relasional secara bertahap (Cursor / Last ID) - Fully Sanitized
+ * fungsi : Menyimpan data s_backup_raw ke tabel relasional secara bertahap (Cursor / Last ID) - Fully Sanitized & Fixed Stats
  */
 declare(strict_types=1);
 
@@ -126,6 +126,7 @@ try {
         if ($noRm) {
             if (isset($pasienMap[$noRm])) {
                 $pasienId = $pasienMap[$noRm];
+                $stats['m_pasien']++; // Tetap hitung pasien yang terproses pada chunk ini
             } else {
                 $stmtInsPasien->execute([
                     ':no_rm'      => substr((string)$noRm, 0, 50),
@@ -160,6 +161,11 @@ try {
                     ':peserta'    => substr((string)($r['status_kepesertaan'] ?? ''), 0, 50),
                 ]);
                 $pasienId = (int)$pdo->lastInsertId();
+                if (!$pasienId) {
+                    $stmtGetPasien = $pdo->prepare("SELECT id FROM m_pasien WHERE no_rm = :rm LIMIT 1");
+                    $stmtGetPasien->execute([':rm' => $noRm]);
+                    $pasienId = (int)$stmtGetPasien->fetchColumn();
+                }
                 if ($pasienId) {
                     $pasienMap[$noRm] = $pasienId;
                     $stats['m_pasien']++;
@@ -205,8 +211,9 @@ try {
             $stmtK = $pdo->prepare("SELECT id FROM t_kunjungan WHERE no_transaksi = :nt LIMIT 1");
             $stmtK->execute([':nt' => $r['no_transaksi']]);
             $kunjunganId = (int)$stmtK->fetchColumn();
-            if ($kunjunganId && $stmtInsKunjungan->rowCount() > 0) {
-                $stats['t_kunjungan']++;
+            
+            if ($kunjunganId) {
+                $stats['t_kunjungan']++; // Tetap hitung kunjungan valid pada chunk ini
             }
 
             // ---- t_pemeriksaan ----
@@ -292,7 +299,7 @@ try {
                     $stmtInsResep = $pdo->prepare("INSERT INTO t_resep (kunjungan_id, dokter_id, tanggal_resep) VALUES (:kid, :did, :tgl)");
                     $stmtInsResep->execute([
                         ':kid' => $kunjunganId,
-                        ':did' => $dokterResepId, // Aman karena sudah diizinkan NULL
+                        ':did' => $dokterResepId,
                         ':tgl' => $r['resep_tanggal'] ?? $r['tanggal_kunjungan'] ?? date('Y-m-d'),
                     ]);
                     $resepId = (int)$pdo->lastInsertId();
@@ -323,11 +330,16 @@ try {
         $resultHashData = hash_generated_result();
         $resultHash     = $resultHashData['hash'];
 
+        // HANYA update batch yang sedang aktif/terakhir di-upload
         $stmtB = $pdo->query("SELECT id FROM s_upload_batch WHERE status IN ('uploaded','generated') ORDER BY uploaded_at DESC LIMIT 1");
         $batchId = $stmtB->fetchColumn();
         if ($batchId) {
             $pdo->prepare("UPDATE s_upload_batch SET result_hash = :rhash, status = 'generated', verify_detail = :detail WHERE id = :id")
-                ->execute([':rhash' => $resultHash, ':detail' => json_encode($resultHashData), ':id' => $batchId]);
+                ->execute([
+                    ':rhash'  => $resultHash, 
+                    ':detail' => json_encode($resultHashData), 
+                    ':id'     => $batchId
+                ]);
         }
     }
 

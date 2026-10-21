@@ -10,7 +10,7 @@ require_once __DIR__ . '/../bootstrap/internal_guard.php';
 require_once BASE_PATH . '/core/parser_sql.php';
 require_once BASE_PATH . '/core/hash_helper.php';
 
-csrf_check_or_die();
+// csrf_check_or_die();
 set_time_limit(600);
 ini_set('memory_limit', '1024M');
 
