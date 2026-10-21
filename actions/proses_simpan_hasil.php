@@ -5,25 +5,22 @@ require_once __DIR__ . '/../bootstrap/internal_guard.php';
 require_once BASE_PATH . '/core/parser_sql.php';
 
 csrf_check_or_die();
-set_time_limit(300); // Naikkan batas waktu sedikit per batch
+set_time_limit(300);
 ini_set('memory_limit', '1024M');
 if (!auth_check()) {
     json_response(['ok' => false, 'msg' => 'Unauthorized'], 401);
 }
 
-// Ganti offset dengan last_id agar performa tetap cepat di baris ke-4 juta
 $lastId = (int)($_POST['last_id'] ?? 0);
-$limit  = 2000; // Ukuran batch bisa ditingkatkan ke 2000 per request
+$limit  = 2000; 
 
 $pdo = db();
 
-// Total rows untuk info frontend (bisa di-cache atau dihitung sekali)
 $totalRows = (int)$pdo->query("SELECT COUNT(*) FROM s_backup_raw")->fetchColumn();
 if ($totalRows === 0) {
     json_response(['ok' => false, 'msg' => 'Tidak ada data di s_backup_raw.'], 400);
 }
 
-// Gunakan id > :last_id (Index Seek - sangat cepat meskipun di baris jutaan)
 $stmtFetch = $pdo->prepare("SELECT id, source_row_id, raw_data FROM s_backup_raw WHERE id > :last_id ORDER BY id ASC LIMIT :lim");
 $stmtFetch->bindValue(':last_id', $lastId, PDO::PARAM_INT);
 $stmtFetch->bindValue(':lim', $limit, PDO::PARAM_INT);
@@ -49,7 +46,6 @@ $stats = [
     't_resep' => 0, 'd_resep_detail' => 0, 'm_obat' => 0, 't_laboratorium' => 0,
 ];
 
-// Kumpulkan data dalam batch untuk pre-fetching (menghindari N+1 query)
 $parsedRows = [];
 $noRmList = [];
 $dokterList = [];
@@ -57,6 +53,11 @@ $dokterList = [];
 foreach ($rows as $row) {
     $r = sql_parse_row($row['raw_data']);
     if (!sql_row_valid($r)) continue;
+
+    // Deteksi lab jika ada
+    if (sql_row_has_lab($r)) {
+        $r['lab_hasil_raw'] = sql_extract_lab_hasil($r);
+    }
 
     $parsedRows[] = $r;
     if (!empty($r['no_rm'])) $noRmList[$r['no_rm']] = true;
@@ -68,7 +69,7 @@ foreach ($rows as $row) {
 $pdo->beginTransaction();
 
 try {
-    // 1. Bulk Lookup Pasien (1 Query untuk 2000 data sekaligus)
+    // 1. Bulk Lookup Pasien
     $pasienMap = [];
     if (!empty($noRmList)) {
         $inRm = array_keys($noRmList);
@@ -78,7 +79,7 @@ try {
         $pasienMap = $stmtMap->fetchAll(PDO::FETCH_KEY_PAIR);
     }
 
-    // 2. Bulk Lookup Tenaga Kesehatan (1 Query untuk 2000 data sekaligus)
+    // 2. Bulk Lookup Tenaga Kesehatan
     $tenagaMap = [];
     if (!empty($dokterList)) {
         $inDokter = array_keys($dokterList);
@@ -88,7 +89,6 @@ try {
         $tenagaMap = $stmtMap->fetchAll(PDO::FETCH_KEY_PAIR);
     }
 
-    // Statement Pre-prepared untuk eksekusi massal
     $stmtInsPasien = $pdo->prepare("INSERT IGNORE INTO m_pasien
         (no_rm, nik, no_asuransi_lain, nama, tempat_lahir, tanggal_lahir,
          jenis_kelamin, status_perkawinan, pendidikan, pekerjaan, agama,
@@ -159,7 +159,7 @@ try {
             }
         }
 
-        // Helper untuk tenaga kesehatan
+        // Helper nakes
         $getTenagaId = function($namaDokter) use ($pdo, &$tenagaMap, $stmtInsTenaga, &$stats) {
             if (empty($namaDokter)) return null;
             if (isset($tenagaMap[$namaDokter])) return $tenagaMap[$namaDokter];
@@ -221,6 +221,84 @@ try {
                         ':bb'   => $r['berat_badan'] ?? null,
                     ]);
                     $stats['t_pemeriksaan']++;
+                }
+            }
+
+            // ---- t_diagnosis ----
+            if ($kunjunganId && !empty($r['diagnosis_raw'])) {
+                $stmtCheckDiag = $pdo->prepare("SELECT id FROM t_diagnosis WHERE kunjungan_id = :kid AND diagnosis_teks = :diag LIMIT 1");
+                $stmtCheckDiag->execute([':kid' => $kunjunganId, ':diag' => $r['diagnosis_raw']]);
+                if (!$stmtCheckDiag->fetchColumn()) {
+                    $pdo->prepare("INSERT INTO t_diagnosis (kunjungan_id, jenis_diagnosis, diagnosis_teks) VALUES (:kid, 'Primer', :diag)")
+                        ->execute([':kid' => $kunjunganId, ':diag' => $r['diagnosis_raw']]);
+                    $stats['t_diagnosis']++;
+                }
+            }
+
+            // ---- t_laboratorium ----
+            if ($kunjunganId && !empty($r['lab_hasil_raw'])) {
+                $stmtCheckLab = $pdo->prepare("SELECT id FROM t_laboratorium WHERE kunjungan_id = :kid LIMIT 1");
+                $stmtCheckLab->execute([':kid' => $kunjunganId]);
+                if (!$stmtCheckLab->fetchColumn()) {
+                    $pdo->prepare("INSERT INTO t_laboratorium (kunjungan_id, hasil_pemeriksaan, tanggal_pemeriksaan) VALUES (:kid, :hasil, :tgl)")
+                        ->execute([
+                            ':kid'   => $kunjunganId,
+                            ':hasil' => $r['lab_hasil_raw'],
+                            ':tgl'   => $r['tanggal_kunjungan'] ?? date('Y-m-d'),
+                        ]);
+                    $stats['t_laboratorium']++;
+                }
+            }
+
+            // ---- t_tindakan ----
+            if ($kunjunganId && !empty($r['nama_tindakan'])) {
+                $nakesId = $getTenagaId($r['nama_pelaksana']);
+                $pdo->prepare("INSERT INTO t_tindakan (kunjungan_id, nama_tindakan, tenaga_kesehatan_id, tanggal_tindakan) VALUES (:kid, :nama, :nakes, :tgl)")
+                    ->execute([
+                        ':kid'   => $kunjunganId,
+                        ':nama'  => $r['nama_tindakan'],
+                        ':nakes' => $nakesId,
+                        ':tgl'   => $r['tanggal_tindakan'] ?? $r['tanggal_kunjungan'] ?? date('Y-m-d'),
+                    ]);
+                $stats['t_tindakan']++;
+            }
+
+            // ---- t_resep & m_obat ----
+            if ($kunjunganId && !empty($r['resep_nama_obat'])) {
+                // Insert Master Obat jika belum ada
+                $namaObat = trim($r['resep_nama_obat']);
+                $stmtCekObat = $pdo->prepare("SELECT id FROM m_obat WHERE nama_obat = :nama LIMIT 1");
+                $stmtCekObat->execute([':nama' => $namaObat]);
+                $obatId = (int)$stmtCekObat->fetchColumn();
+
+                if (!$obatId) {
+                    $pdo->prepare("INSERT INTO m_obat (nama_obat, satuan) VALUES (:nama, 'Tablet')")
+                        ->execute([':nama' => $namaObat]);
+                    $obatId = (int)$pdo->lastInsertId();
+                    if ($obatId) $stats['m_obat']++;
+                }
+
+                // Insert Header Resep
+                $dokterResepId = $getTenagaId($r['resep_dokter']);
+                $stmtInsResep = $pdo->prepare("INSERT INTO t_resep (kunjungan_id, dokter_id, tanggal_resep) VALUES (:kid, :did, :tgl)");
+                $stmtInsResep->execute([
+                    ':kid' => $kunjunganId,
+                    ':did' => $dokterResepId,
+                    ':tgl' => $r['resep_tanggal'] ?? $r['tanggal_kunjungan'] ?? date('Y-m-d'),
+                ]);
+                $resepId = (int)$pdo->lastInsertId();
+                if ($resepId) $stats['t_resep']++;
+
+                // Insert Detail Resep
+                if ($resepId && $obatId) {
+                    $pdo->prepare("INSERT INTO d_resep_detail (resep_id, obat_id, jumlah, aturan_pakai) VALUES (:rid, :oid, :jml, :aturan)")
+                        ->execute([
+                            ':rid'    => $resepId,
+                            ':oid'    => $obatId,
+                            ':jml'    => $r['resep_jumlah'] ?? 1,
+                            ':aturan' => $r['resep_aturan'] ?? '-',
+                        ]);
+                    $stats['d_resep_detail']++;
                 }
             }
         }
