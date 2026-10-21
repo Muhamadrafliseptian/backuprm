@@ -130,29 +130,11 @@ $countRaw = (int)db()->query("SELECT COUNT(*) FROM s_backup_raw")->fetchColumn()
         t_laboratorium:     { label: 'Laboratorium',     icon: 'ri-flask-line' }
     };
 
-    /* ============================================================
-       INIT
-       ============================================================ */
-    document.addEventListener('DOMContentLoaded', function () {
-        const raw     = sessionStorage.getItem('preview_data');
-        const rawTime = sessionStorage.getItem('preview_data_ts');
+       document.addEventListener('DOMContentLoaded', function () {
+        sessionStorage.removeItem('preview_data');
+        sessionStorage.removeItem('preview_data_ts');
 
-        // Cek sessionStorage
-        if (!raw || !rawTime || (Date.now() - parseInt(rawTime, 10)) > PREVIEW_MAX_AGE_MS) {
-            showFallback();
-            return;
-        }
-
-        let data;
-        try { data = JSON.parse(raw); }
-        catch (e) { showFallback(); return; }
-
-        if ((data.stats?.raw_rows || 0) !== BACKUP_COUNT) {
-            showFallback();
-            return;
-        }
-
-        renderPreview(data);
+        loadPreviewFromServer();
     });
 
     /* ============================================================
