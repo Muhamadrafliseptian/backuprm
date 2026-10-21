@@ -1,8 +1,5 @@
 <?php
 /**
-- file   : pages/upload.php
-- path   : C:\xampp\htdocs\backuprm\pages\upload.php
-- fungsi : Frontend Auto-Split Importer (Virtual Safe-Cut Slice 100MB)
  */
 declare(strict_types=1);
 

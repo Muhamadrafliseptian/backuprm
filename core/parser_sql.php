@@ -1,8 +1,8 @@
 <?php
 /**
- * file   : parser_sql.php
+ * file   : core/parser_sql.php
  * path   : C:\xampp\htdocs\backuprm\core\parser_sql.php
- * fungsi : Parser SQL backup RME — Mampu memecah multi-row INSERT SIKDA (244 kolom)
+ * fungsi : Parser SQL backup RME SIKDA — Presisi Indeks Kolom 244
  */
 declare(strict_types=1);
 
@@ -10,10 +10,9 @@ require_once __DIR__ . '/../bootstrap/internal_guard.php';
 require_once BASE_PATH . '/core/parser_helper.php';
 
 /* ============================================================
-   INDEX KOLOM (base 0) — 244 Kolom SIKDA
+   INDEX KOLOM (base 0) — SIKDA 244 Kolom Presisi
    ============================================================ */
 const COL = [
-    // Header (kolom 0-45)
     'no'                     => 0,
     'id_backup'              => 1,
     'tanggal_backup'         => 2,
@@ -55,13 +54,7 @@ const COL = [
     'tanggal_kunjungan'      => 46,
     'jam_kunjungan'          => 47,
 
-    // Diagnosis
-    'diagnosis_awal'         => 65,
-    'diagnosis_akhir'        => 192,
-    'diagnosis_primer'       => 193,
-    'diagnosis_sekunder'     => 194,
-
-    // Pemeriksaan
+    // Pemeriksaan & Vital Sign
     'kesadaran'              => 71,
     'vital_sign_raw'         => 72,
     'nadi'                   => 73,
@@ -71,7 +64,17 @@ const COL = [
     'diastole'               => 77,
     'suhu'                   => 78,
 
-    // Tenaga kesehatan
+    // Antropometri (TB & BB) - Pastikan indeks ini tepat sesuai urutan SIKDA
+    'berat_badan'            => 222, // Sesuai contoh: '72' (kg)
+    'tinggi_badan'           => 223, // Sesuai contoh: '18' atau '0.60' (cm/m)
+
+    // Diagnosis
+    'diagnosis_awal'         => 65,
+    'diagnosis_akhir'        => 192,
+    'diagnosis_primer'       => 193,
+    'diagnosis_sekunder'     => 194,
+
+    // Tenaga kesehatan & Dokter
     'dokter_umum'            => 197,
     'perawat'                => 198,
     'dokter_tindakan'        => 212,
@@ -90,13 +93,6 @@ const COL = [
     'resep_dokter'           => 237,
     'resep_tanggal'          => 239,
     'resep_jam'              => 240,
-
-    // TB/BB
-    'tinggi_badan'           => 222,
-    'berat_badan'            => 223,
-
-    // Lab
-    'lab_hasil'              => 175,
 ];
 
 /**
@@ -221,7 +217,6 @@ function sql_parse_single_tuple(string $tupleStr): array
 
 function sql_parse_row(string $raw): array
 {
-    // Jika dikirim string query utuh, ekstrak tuple pertama
     if (stripos($raw, 'INSERT') === 0 || stripos($raw, 'VALUES') !== false) {
         $tuples = sql_extract_all_tuples($raw);
         $v = $tuples[0] ?? [];
@@ -232,6 +227,9 @@ function sql_parse_row(string $raw): array
     if (empty($v)) return [];
 
     $get = fn($key) => $v[COL[$key] ?? -1] ?? null;
+
+    // Fungsi sanitasi panjang string agar aman dari error 1406 (Data too long)
+    $safeStr = fn($key, $max = 95) => substr((string)($get($key) ?? ''), 0, $max);
 
     return [
         'no_transaksi'        => parse_null($get('id_backup')),
@@ -270,21 +268,23 @@ function sql_parse_row(string $raw): array
         'pekerjaan'           => parse_null($get('pekerjaan')),
         'status_perkawinan'   => parse_int($get('status_perkawinan')),
         'status_kepesertaan'  => parse_null($get('status_kepesertaan')),
-        'tinggi_badan'        => parse_null($get('tinggi_badan')),
-        'berat_badan'         => parse_null($get('berat_badan')),
+        
+        // ANTROPOMETRI (Dibatasi agar aman)
+        'tinggi_badan'        => $safeStr('tinggi_badan', 20),
+        'berat_badan'         => $safeStr('berat_badan', 20),
 
         // KUNJUNGAN
         'tanggal_kunjungan'   => parse_dt($get('tanggal_kunjungan')),
         'jam_kunjungan'       => parse_jam($get('jam_kunjungan')),
 
-        // PEMERIKSAAN
-        'kesadaran'           => parse_null($get('kesadaran')),
-        'nadi'                => parse_null($get('nadi')),
-        'respiratory_rate'    => parse_null($get('respiratory_rate')),
-        'tekanan_darah'       => parse_null($get('tekanan_darah')),
-        'sistole'             => parse_null($get('sistole')),
-        'diastole'            => parse_null($get('diastole')),
-        'suhu'                => parse_null($get('suhu')),
+        // PEMERIKSAAN (Sanitasi string ketat)
+        'kesadaran'           => $safeStr('kesadaran', 95),
+        'nadi'                => $safeStr('nadi', 30),
+        'respiratory_rate'    => $safeStr('respiratory_rate', 30),
+        'tekanan_darah'       => $safeStr('tekanan_darah', 30),
+        'sistole'             => $safeStr('sistole', 20),
+        'diastole'            => $safeStr('diastole', 20),
+        'suhu'                => $safeStr('suhu', 30),
 
         // DIAGNOSIS
         'diagnosis_raw'       => parse_null($get('diagnosis_akhir'))
