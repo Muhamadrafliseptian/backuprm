@@ -1,7 +1,7 @@
 <?php
 /**
  * file   : actions/simpan-hasil.php
- * fungsi : Menyimpan data s_backup_raw ke tabel relasional secara bertahap (Cursor / Last ID)
+ * fungsi : Menyimpan data s_backup_raw ke tabel relasional secara bertahap (Cursor / Last ID) - Fully Sanitized
  */
 declare(strict_types=1);
 
@@ -128,36 +128,36 @@ try {
                 $pasienId = $pasienMap[$noRm];
             } else {
                 $stmtInsPasien->execute([
-                    ':no_rm'      => $noRm,
-                    ':nik'        => $r['nik'] ?? null,
-                    ':asuransi'   => $r['no_asuransi_lain'] ?? null,
-                    ':nama'       => $r['nama'] ?? '-',
-                    ':tempat'     => $r['tempat_lahir'] ?? null,
+                    ':no_rm'      => substr((string)$noRm, 0, 50),
+                    ':nik'        => substr((string)($r['nik'] ?? ''), 0, 30),
+                    ':asuransi'   => substr((string)($r['no_asuransi_lain'] ?? ''), 0, 50),
+                    ':nama'       => substr((string)($r['nama'] ?? '-'), 0, 150),
+                    ':tempat'     => substr((string)($r['tempat_lahir'] ?? ''), 0, 100),
                     ':tgl_lahir'  => $r['tanggal_lahir'] ?? null,
                     ':jk'         => $r['jenis_kelamin'] ?? null,
                     ':kawin'      => $r['status_perkawinan'] ?? null,
-                    ':pendidikan' => $r['pendidikan'] ?? null,
-                    ':pekerjaan'  => $r['pekerjaan'] ?? null,
-                    ':agama'      => $r['agama'] ?? null,
-                    ':alamat'     => $r['alamat'] ?? null,
-                    ':rt'         => $r['rt'] ?? null,
-                    ':rw'         => $r['rw'] ?? null,
-                    ':kel'        => $r['kode_kelurahan'] ?? null,
-                    ':kec'        => $r['kode_kecamatan'] ?? null,
-                    ':kab'        => $r['kode_kabupaten_kota'] ?? null,
-                    ':prov'       => $r['kode_provinsi'] ?? null,
-                    ':pos'        => $r['kode_pos'] ?? null,
-                    ':alamat_dom' => $r['alamat_domisili'] ?? null,
-                    ':rt_dom'     => $r['rt_domisili'] ?? null,
-                    ':rw_dom'     => $r['rw_domisili'] ?? null,
-                    ':kel_dom'    => $r['kode_kelurahan_domisili'] ?? null,
-                    ':kec_dom'    => $r['kode_kecamatan_domisili'] ?? null,
-                    ':kab_dom'    => $r['kode_kabupaten_domisili'] ?? null,
-                    ':prov_dom'   => $r['kode_provinsi_domisili'] ?? null,
-                    ':pos_dom'    => $r['kode_pos_domisili'] ?? null,
-                    ':telp'       => $r['no_telepon'] ?? null,
-                    ':telp_alt'   => $r['no_telepon_alternatif'] ?? null,
-                    ':peserta'    => $r['status_kepesertaan'] ?? null,
+                    ':pendidikan' => substr((string)($r['pendidikan'] ?? ''), 0, 50),
+                    ':pekerjaan'  => substr((string)($r['pekerjaan'] ?? ''), 0, 50),
+                    ':agama'      => substr((string)($r['agama'] ?? ''), 0, 50),
+                    ':alamat'     => substr((string)($r['alamat'] ?? ''), 0, 255),
+                    ':rt'         => substr((string)($r['rt'] ?? ''), 0, 10),
+                    ':rw'         => substr((string)($r['rw'] ?? ''), 0, 10),
+                    ':kel'        => substr((string)($r['kode_kelurahan'] ?? ''), 0, 20),
+                    ':kec'        => substr((string)($r['kode_kecamatan'] ?? ''), 0, 20),
+                    ':kab'        => substr((string)($r['kode_kabupaten_kota'] ?? ''), 0, 20),
+                    ':prov'       => substr((string)($r['kode_provinsi'] ?? ''), 0, 20),
+                    ':pos'        => substr((string)($r['kode_pos'] ?? ''), 0, 10),
+                    ':alamat_dom' => substr((string)($r['alamat_domisili'] ?? ''), 0, 255),
+                    ':rt_dom'     => substr((string)($r['rt_domisili'] ?? ''), 0, 10),
+                    ':rw_dom'     => substr((string)($r['rw_domisili'] ?? ''), 0, 10),
+                    ':kel_dom'    => substr((string)($r['kode_kelurahan_domisili'] ?? ''), 0, 20),
+                    ':kec_dom'    => substr((string)($r['kode_kecamatan_domisili'] ?? ''), 0, 20),
+                    ':kab_dom'    => substr((string)($r['kode_kabupaten_domisili'] ?? ''), 0, 20),
+                    ':prov_dom'   => substr((string)($r['kode_provinsi_domisili'] ?? ''), 0, 20),
+                    ':pos_dom'    => substr((string)($r['kode_pos_domisili'] ?? ''), 0, 10),
+                    ':telp'       => substr((string)($r['no_telepon'] ?? ''), 0, 50),
+                    ':telp_alt'   => substr((string)($r['no_telepon_alternatif'] ?? ''), 0, 50),
+                    ':peserta'    => substr((string)($r['status_kepesertaan'] ?? ''), 0, 50),
                 ]);
                 $pasienId = (int)$pdo->lastInsertId();
                 if ($pasienId) {
@@ -167,12 +167,13 @@ try {
             }
         }
 
-        // Helper nakes
+        // Helper nakes aman
         $getTenagaId = function($namaDokter) use ($pdo, &$tenagaMap, $stmtInsTenaga, &$stats) {
-            if (empty($namaDokter)) return null;
+            $namaDokter = trim((string)$namaDokter);
+            if ($namaDokter === '' || strcasecmp($namaDokter, '-') === 0) return null;
             if (isset($tenagaMap[$namaDokter])) return $tenagaMap[$namaDokter];
 
-            $stmtInsTenaga->execute([':n' => $namaDokter]);
+            $stmtInsTenaga->execute([':n' => substr($namaDokter, 0, 150)]);
             $stmt = $pdo->prepare("SELECT id FROM m_tenaga_kesehatan WHERE nama = :n LIMIT 1");
             $stmt->execute([':n' => $namaDokter]);
             $tid = (int)$stmt->fetchColumn();
@@ -181,7 +182,7 @@ try {
                 $tenagaMap[$namaDokter] = $tid;
                 $stats['m_tenaga_kesehatan']++;
             }
-            return $tid;
+            return $tid > 0 ? $tid : null;
         };
 
         if (!empty($r['dokter'])) {
@@ -193,12 +194,12 @@ try {
         if (!empty($r['no_transaksi']) && $pasienId) {
             $stmtInsKunjungan->execute([
                 ':pid'     => $pasienId,
-                ':nt'      => $r['no_transaksi'],
+                ':nt'      => substr((string)$r['no_transaksi'], 0, 100),
                 ':tgl'     => $r['tanggal_kunjungan'] ?? null,
                 ':jam'     => $r['jam_kunjungan'] ?? null,
-                ':sumber'  => $r['sumber_data'] ?? null,
+                ':sumber'  => substr((string)($r['sumber_data'] ?? ''), 0, 50),
                 ':tgl_bck' => $r['tanggal_backup'] ?? null,
-                ':petugas' => $r['petugas_input'] ?? null,
+                ':petugas' => substr((string)($r['petugas_input'] ?? ''), 0, 100),
             ]);
             
             $stmtK = $pdo->prepare("SELECT id FROM t_kunjungan WHERE no_transaksi = :nt LIMIT 1");
@@ -234,11 +235,12 @@ try {
 
             // ---- t_diagnosis ----
             if ($kunjunganId && !empty($r['diagnosis_raw'])) {
+                $diagClean = substr((string)$r['diagnosis_raw'], 0, 255);
                 $stmtCheckDiag = $pdo->prepare("SELECT id FROM t_diagnosis WHERE kunjungan_id = :kid AND nama_diagnosis = :diag LIMIT 1");
-                $stmtCheckDiag->execute([':kid' => $kunjunganId, ':diag' => $r['diagnosis_raw']]);
+                $stmtCheckDiag->execute([':kid' => $kunjunganId, ':diag' => $diagClean]);
                 if (!$stmtCheckDiag->fetchColumn()) {
                     $pdo->prepare("INSERT INTO t_diagnosis (kunjungan_id, jenis_diagnosis, nama_diagnosis) VALUES (:kid, 'Utama', :diag)")
-                        ->execute([':kid' => $kunjunganId, ':diag' => $r['diagnosis_raw']]);
+                        ->execute([':kid' => $kunjunganId, ':diag' => $diagClean]);
                     $stats['t_diagnosis']++;
                 }
             }
@@ -252,7 +254,7 @@ try {
                         ->execute([
                             ':kid'   => $kunjunganId,
                             ':tgl'   => $r['tanggal_kunjungan'] ?? date('Y-m-d'),
-                            ':hasil' => $r['lab_hasil_raw'],
+                            ':hasil' => (string)$r['lab_hasil_raw'],
                         ]);
                     $stats['t_laboratorium']++;
                 }
@@ -264,7 +266,7 @@ try {
                 $pdo->prepare("INSERT INTO t_tindakan (kunjungan_id, nama_tindakan, tenaga_kesehatan_id, tanggal_tindakan) VALUES (:kid, :nama, :nakes, :tgl)")
                     ->execute([
                         ':kid'   => $kunjunganId,
-                        ':nama'  => $r['nama_tindakan'],
+                        ':nama'  => substr((string)$r['nama_tindakan'], 0, 255),
                         ':nakes' => $nakesId,
                         ':tgl'   => $r['tanggal_tindakan'] ?? $r['tanggal_kunjungan'] ?? date('Y-m-d'),
                     ]);
@@ -273,37 +275,39 @@ try {
 
             // ---- t_resep & m_obat ----
             if ($kunjunganId && !empty($r['resep_nama_obat'])) {
-                $namaObat = trim($r['resep_nama_obat']);
-                $stmtCekObat = $pdo->prepare("SELECT id FROM m_obat WHERE nama_obat = :nama LIMIT 1");
-                $stmtCekObat->execute([':nama' => $namaObat]);
-                $obatId = (int)$stmtCekObat->fetchColumn();
+                $namaObat = substr(trim((string)$r['resep_nama_obat']), 0, 150);
+                if ($namaObat !== '') {
+                    $stmtCekObat = $pdo->prepare("SELECT id FROM m_obat WHERE nama_obat = :nama LIMIT 1");
+                    $stmtCekObat->execute([':nama' => $namaObat]);
+                    $obatId = (int)$stmtCekObat->fetchColumn();
 
-                if (!$obatId) {
-                    $pdo->prepare("INSERT INTO m_obat (nama_obat, satuan) VALUES (:nama, 'Tablet')")
-                        ->execute([':nama' => $namaObat]);
-                    $obatId = (int)$pdo->lastInsertId();
-                    if ($obatId) $stats['m_obat']++;
-                }
+                    if (!$obatId) {
+                        $pdo->prepare("INSERT INTO m_obat (nama_obat, satuan) VALUES (:nama, 'Tablet')")
+                            ->execute([':nama' => $namaObat]);
+                        $obatId = (int)$pdo->lastInsertId();
+                        if ($obatId) $stats['m_obat']++;
+                    }
 
-                $dokterResepId = $getTenagaId($r['resep_dokter']);
-                $stmtInsResep = $pdo->prepare("INSERT INTO t_resep (kunjungan_id, dokter_id, tanggal_resep) VALUES (:kid, :did, :tgl)");
-                $stmtInsResep->execute([
-                    ':kid' => $kunjunganId,
-                    ':did' => $dokterResepId,
-                    ':tgl' => $r['resep_tanggal'] ?? $r['tanggal_kunjungan'] ?? date('Y-m-d'),
-                ]);
-                $resepId = (int)$pdo->lastInsertId();
-                if ($resepId) $stats['t_resep']++;
+                    $dokterResepId = $getTenagaId($r['resep_dokter']);
+                    $stmtInsResep = $pdo->prepare("INSERT INTO t_resep (kunjungan_id, dokter_id, tanggal_resep) VALUES (:kid, :did, :tgl)");
+                    $stmtInsResep->execute([
+                        ':kid' => $kunjunganId,
+                        ':did' => $dokterResepId, // Aman karena sudah diizinkan NULL
+                        ':tgl' => $r['resep_tanggal'] ?? $r['tanggal_kunjungan'] ?? date('Y-m-d'),
+                    ]);
+                    $resepId = (int)$pdo->lastInsertId();
+                    if ($resepId) $stats['t_resep']++;
 
-                if ($resepId && $obatId) {
-                    $pdo->prepare("INSERT INTO d_resep_detail (resep_id, obat_id, jumlah, aturan_pakai) VALUES (:rid, :oid, :jml, :aturan)")
-                        ->execute([
-                            ':rid'    => $resepId,
-                            ':oid'    => $obatId,
-                            ':jml'    => $r['resep_jumlah'] ?? 1,
-                            ':aturan' => $r['resep_aturan'] ?? '-',
-                        ]);
-                    $stats['d_resep_detail']++;
+                    if ($resepId && $obatId) {
+                        $pdo->prepare("INSERT INTO d_resep_detail (resep_id, obat_id, jumlah, aturan_pakai) VALUES (:rid, :oid, :jml, :aturan)")
+                            ->execute([
+                                ':rid'    => $resepId,
+                                ':oid'    => $obatId,
+                                ':jml'    => substr((string)($r['resep_jumlah'] ?? '1'), 0, 50),
+                                ':aturan' => substr((string)($r['resep_aturan'] ?? '-'), 0, 100),
+                            ]);
+                        $stats['d_resep_detail']++;
+                    }
                 }
             }
         }
@@ -341,7 +345,7 @@ try {
         $pdo->rollBack();
     }
     
-    // Ambil detail baris data terakhir yang sedang diproses untuk debugging
+    // Debug info detail baris yang error
     $debugContext = '';
     if (isset($row['raw_data'])) {
         $debugContext = '<br><br><b>Data mentah penyebab error:</b><br><code style="font-size:10px; color:#d97706; background:#fffbeb; padding:4px; display:block; max-height:100px; overflow:auto;">' . htmlspecialchars($row['raw_data']) . '</code>';
