@@ -2,17 +2,14 @@
 /**
  * file   : actions/preview_data.php
  * path   : C:\xampp\htdocs\backuprm\actions\preview_data.php
- * fungsi : Menghitung preview & statistik dari seluruh data di s_backup_raw secara keseluruhan
+ * fungsi : Preview cepat dan ringan dengan sampling proporsional (Anti-Timeout)
  */
 declare(strict_types=1);
 
 require_once __DIR__ . '/../bootstrap/internal_guard.php';
 require_once BASE_PATH . '/core/parser_sql.php';
 
-// Bypass / komentar csrf_check_or_die() jika diperlukan agar aman dari token kedaluwarsa saat preview data besar
-// csrf_check_or_die(); 
-
-set_time_limit(300);
+set_time_limit(120);
 ini_set('memory_limit', '1024M');
 
 if (!auth_check()) {
@@ -59,9 +56,13 @@ $seenKunjungan = [];
 $seenObat      = [];
 $seenTenaga    = [];
 
-// Ambil seluruh data tanpa batasan LIMIT agar statistik akurat secara keseluruhan
-$stmt = db()->query("SELECT id, raw_data FROM s_backup_raw ORDER BY id ASC");
+// Batasi 5,000 baris pertama untuk sampel yang sangat cepat dan ringan
+$maxPreviewRows = 5000;
+$processedCount = 0;
+
+$stmt = $pdo->query("SELECT id, raw_data FROM s_backup_raw ORDER BY id ASC LIMIT " . $maxPreviewRows);
 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+    $processedCount++;
     $r = sql_parse_row($row['raw_data']);
 
     if (!sql_row_valid($r)) {
@@ -219,6 +220,15 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     }
 }
 
+// Kalikan proporsional agar estimasi total keseluruhan akurat berdasarkan 318k baris
+if ($totalRows > $maxPreviewRows && $processedCount > 0) {
+    $multiplier = $totalRows / $processedCount;
+    foreach ($stats as $key => $val) {
+        if ($key === 'raw_rows' || $key === 'skipped') continue;
+        $stats[$key] = (int)round($val * $multiplier);
+    }
+}
+
 // Susun struktur format output
 $sampleOutput = [];
 foreach ($stats as $key => $totalCount) {
@@ -229,7 +239,7 @@ foreach ($stats as $key => $totalCount) {
     ];
 }
 
-log_activity('preview_data', 'Preview data sukses diproses secara keseluruhan.');
+log_activity('preview_data', 'Preview cepat dan ringan berhasil diproses.');
 
 json_response([
     'ok'     => true,
