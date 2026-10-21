@@ -1,8 +1,8 @@
 <?php
 /**
- * file   : pages/upload.php
- * path   : C:\xampp\htdocs\backuprm\pages\upload.php
- * fungsi : Upload file SQL via Chunked Upload (Frontend) + preview + clear
+- file   : pages/upload.php
+- path   : C:\xampp\htdocs\backuprm\pages\upload.php
+- fungsi : Upload file SQL via Chunked Upload (Frontend) + Auto Parse setelah gabung + preview + clear
  */
 declare(strict_types=1);
 
@@ -105,7 +105,7 @@ try {
     </div>
 </div>
 
-<!-- Bagian Tabel Riwayat Upload Tetap Sama -->
+<!-- Bagian Tabel Riwayat Upload -->
 <?php if ($recentBatches): ?>
 <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mt-6">
     <div class="p-5 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
@@ -187,7 +187,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     /* ============================================================
-       CHUNKS UPLOAD LOGIC (FRONTEND)
+       CHUNKS UPLOAD LOGIC (FRONTEND) + AUTO PARSE
        ============================================================ */
     const formUpload = document.getElementById('formUpload');
     if (formUpload) {
@@ -226,9 +226,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 fd.append('file_name', file.name);
                 fd.append('mode', mode);
 
-                // Tambahkan CSRF token jika diperlukan oleh backend Anda
-                // fd.append('csrf_token', window.CSRF_TOKEN);
-
                 let percent = Math.round(((currentChunk + 1) / totalChunks) * 100);
                 progressBar.style.width = percent + '%';
                 progressPercent.innerText = percent + '%';
@@ -256,12 +253,43 @@ document.addEventListener('DOMContentLoaded', function () {
                         throw new Error(json.msg || 'Gagal mengunggah chunk.');
                     }
 
-                    // Jika chunk terakhir dan server sudah selesai memproses
+                    // Jika chunk terakhir selesai digabung, lanjutkan ke proses parsing database
                     if (json.finished) {
+                        progressText.innerText = 'Mengurai dan menyimpan data ke database...';
+                        NProgress.start();
+
+                        const parseFd = new FormData();
+                        parseFd.append('upload_id', json.upload_id);
+                        parseFd.append('file_name', json.file_name);
+                        parseFd.append('file_path', json.file_path);
+                        parseFd.append('mode', json.mode);
+
+                        const parseRes = await fetch(window.u('/actions/parse-sql-file'), {
+                            method: 'POST',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': window.CSRF_TOKEN
+                            },
+                            body: parseFd
+                        });
+
+                        const parseText = await parseRes.text();
+                        let parseJson;
+                        try {
+                            parseJson = JSON.parse(parseText);
+                        } catch (err) {
+                            throw new Error('Response parse bukan JSON: ' + parseText);
+                        }
+
+                        NProgress.done();
+                        if (!parseJson.ok) {
+                            throw new Error(parseJson.msg || 'Gagal memproses file SQL ke database.');
+                        }
+
                         Swal.fire({
                             icon: 'success',
                             title: 'Berhasil Upload & Parsing',
-                            text: json.msg,
+                            text: parseJson.msg,
                             confirmButtonColor: '#10b981'
                         }).then(() => location.reload());
                         return;
@@ -270,14 +298,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 } catch (err) {
                     btnUpload.disabled = false;
                     btnUpload.innerHTML = '<i class="ri-upload-cloud-line mr-1"></i> Upload File SQL';
-                    showError('Gagal Upload Chunk', err.toString());
+                    progressWrapper.classList.add('hidden');
+                    NProgress.done();
+                    showError('Gagal Proses', err.toString());
                     return;
                 }
             }
         });
     }
 
-    // Tombol Preview & Clear Tetap Berfungsi Normal
+    // Tombol Preview & Clear
     const btnPreview = document.getElementById('btnPreview');
     if (btnPreview) {
         btnPreview.addEventListener('click', function () {
