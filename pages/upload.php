@@ -141,7 +141,10 @@ try {
                     </td>
                     <td class="py-3 px-4 text-right">
                         <?php if ($b['status'] === 'uploaded'): ?>
-                            <a href="<?= base_url('generate') ?>" class="inline-flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-colors"><i class="ri-magic-line"></i> Preview &amp; Simpan</a>
+                        <a href="<?= base_url('generate?batch=' . urlencode($b['batch_id'])) ?>" 
+   class="inline-flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-colors">
+    <i class="ri-magic-line"></i> Preview &amp; Simpan
+</a>
                         <?php else: ?>
                             <a href="<?= base_url('verifikasi?batch=' . urlencode($b['batch_id'])) ?>" class="inline-flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold text-mint-700 bg-mint-50 hover:bg-mint-100 border border-mint-200 rounded-lg transition-colors"><i class="ri-shield-check-line"></i> Detail</a>
                         <?php endif; ?>

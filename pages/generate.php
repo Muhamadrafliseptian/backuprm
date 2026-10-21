@@ -154,8 +154,14 @@ $countRaw = (int)db()->query("SELECT COUNT(*) FROM s_backup_raw")->fetchColumn()
 
     function loadPreviewFromServer() {
         const btn = document.getElementById('btnLoadPreview');
-        btn.disabled = true;
-        btn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> Memuat...';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> Memuat...';
+        }
+
+        // Ambil query parameter batch dari URL jika ada
+        const urlParams = new URLSearchParams(window.location.search);
+        const batchId = urlParams.get('batch') || '';
 
         NProgress.start();
         fetch(window.u('/actions/preview-data'), {
@@ -164,7 +170,8 @@ $countRaw = (int)db()->query("SELECT COUNT(*) FROM s_backup_raw")->fetchColumn()
                 'X-Requested-With': 'XMLHttpRequest',
                 'X-CSRF-TOKEN': window.CSRF_TOKEN,
                 'Content-Type': 'application/x-www-form-urlencoded'
-            }
+            },
+            body: 'batch_id=' + encodeURIComponent(batchId)
         })
         .then(r => r.text().then(text => {
             try { return { ok: true, json: JSON.parse(text) }; }
@@ -173,8 +180,10 @@ $countRaw = (int)db()->query("SELECT COUNT(*) FROM s_backup_raw")->fetchColumn()
         .then(res => {
             NProgress.done();
             if (!res.ok) {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="ri-refresh-line"></i> Muat Preview';
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="ri-refresh-line"></i> Muat Preview';
+                }
                 Swal.fire({
                     icon: 'error',
                     title: 'Response bukan JSON',
@@ -187,8 +196,10 @@ $countRaw = (int)db()->query("SELECT COUNT(*) FROM s_backup_raw")->fetchColumn()
 
             const json = res.json;
             if (!json.ok) {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="ri-refresh-line"></i> Muat Preview';
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="ri-refresh-line"></i> Muat Preview';
+                }
                 Swal.fire({
                     icon: 'error',
                     title: 'Gagal Memuat',
@@ -201,14 +212,17 @@ $countRaw = (int)db()->query("SELECT COUNT(*) FROM s_backup_raw")->fetchColumn()
             sessionStorage.setItem('preview_data', JSON.stringify(json));
             sessionStorage.setItem('preview_data_ts', Date.now().toString());
 
-            // Render
-            document.getElementById('fallbackArea').classList.add('hidden');
+            // Render UI
+            const fallbackArea = document.getElementById('fallbackArea');
+            if (fallbackArea) fallbackArea.classList.add('hidden');
             renderPreview(json);
         })
         .catch(err => {
             NProgress.done();
-            btn.disabled = false;
-            btn.innerHTML = '<i class="ri-refresh-line"></i> Muat Preview';
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="ri-refresh-line"></i> Muat Preview';
+            }
             Swal.fire({
                 icon: 'error',
                 title: 'Kesalahan Jaringan',

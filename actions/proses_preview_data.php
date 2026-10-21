@@ -2,7 +2,7 @@
 /**
  * file   : actions/preview_data.php
  * path   : C:\xampp\htdocs\backuprm\actions\preview_data.php
- * fungsi : Preview cepat dan ringan dengan sampling proporsional (Anti-Timeout)
+ * fungsi : Preview data spesifik per batch_id atau secara keseluruhan (Anti-Timeout)
  */
 declare(strict_types=1);
 
@@ -17,10 +17,18 @@ if (!auth_check()) {
 }
 
 $pdo = db();
+$batchId = trim($_POST['batch_id'] ?? $_GET['batch_id'] ?? '');
 
-$totalRows = (int)$pdo->query("SELECT COUNT(*) FROM s_backup_raw")->fetchColumn();
+if ($batchId !== '') {
+    $stmtCount = $pdo->prepare("SELECT COUNT(*) FROM s_backup_raw WHERE batch_id = :bid");
+    $stmtCount->execute([':bid' => $batchId]);
+    $totalRows = (int)$stmtCount->fetchColumn();
+} else {
+    $totalRows = (int)$pdo->query("SELECT COUNT(*) FROM s_backup_raw")->fetchColumn();
+}
+
 if ($totalRows === 0) {
-    json_response(['ok' => false, 'msg' => 'Tidak ada data di s_backup_raw.'], 400);
+    json_response(['ok' => false, 'msg' => 'Tidak ada data pada s_backup_raw.'], 400);
 }
 
 $stats = [
@@ -56,11 +64,16 @@ $seenKunjungan = [];
 $seenObat      = [];
 $seenTenaga    = [];
 
-// Batasi 5,000 baris pertama untuk sampel yang sangat cepat dan ringan
 $maxPreviewRows = 5000;
 $processedCount = 0;
 
-$stmt = $pdo->query("SELECT id, raw_data FROM s_backup_raw ORDER BY id ASC LIMIT " . $maxPreviewRows);
+if ($batchId !== '') {
+    $stmt = $pdo->prepare("SELECT id, raw_data FROM s_backup_raw WHERE batch_id = :bid ORDER BY id ASC LIMIT " . $maxPreviewRows);
+    $stmt->execute([':bid' => $batchId]);
+} else {
+    $stmt = $pdo->query("SELECT id, raw_data FROM s_backup_raw ORDER BY id ASC LIMIT " . $maxPreviewRows);
+}
+
 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     $processedCount++;
     $r = sql_parse_row($row['raw_data']);
@@ -74,15 +87,14 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     if (!empty($r['no_rm']) && !isset($seenPasien[$r['no_rm']])) {
         $seenPasien[$r['no_rm']] = true;
         $stats['m_pasien']++;
-        
         if (count($samples['m_pasien']) < 15) {
             $samples['m_pasien'][] = [
-                'no_rm'             => $r['no_rm'],
-                'nik'               => $r['nik'] ?? '-',
-                'nama'              => $r['nama'] ?? '-',
-                'tanggal_lahir'     => $r['tanggal_lahir'] ?? '-',
-                'jenis_kelamin'     => $r['jenis_kelamin'] ?? '-',
-                'alamat'            => $r['alamat'] ?? '-',
+                'no_rm'         => $r['no_rm'],
+                'nik'           => $r['nik'] ?? '-',
+                'nama'          => $r['nama'] ?? '-',
+                'tanggal_lahir' => $r['tanggal_lahir'] ?? '-',
+                'jenis_kelamin' => $r['jenis_kelamin'] ?? '-',
+                'alamat'        => $r['alamat'] ?? '-',
             ];
         }
     }
@@ -91,7 +103,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     if (!empty($r['dokter']) && !isset($seenTenaga[$r['dokter']])) {
         $seenTenaga[$r['dokter']] = true;
         $stats['m_tenaga_kesehatan']++;
-        
         if (count($samples['m_tenaga_kesehatan']) < 15) {
             $samples['m_tenaga_kesehatan'][] = [
                 'nama'         => $r['dokter'],
@@ -104,7 +115,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     if (!empty($r['no_transaksi']) && !isset($seenKunjungan[$r['no_transaksi']])) {
         $seenKunjungan[$r['no_transaksi']] = true;
         $stats['t_kunjungan']++;
-        
         if (count($samples['t_kunjungan']) < 15) {
             $samples['t_kunjungan'][] = [
                 'no_rm'             => $r['no_rm'] ?? '-',
@@ -118,10 +128,10 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             $stats['t_pemeriksaan']++;
             if (count($samples['t_pemeriksaan']) < 15) {
                 $samples['t_pemeriksaan'][] = [
-                    'no_transaksi'      => $r['no_transaksi'],
-                    'tekanan_darah'     => $r['tekanan_darah'] ?? '-',
-                    'suhu'              => $r['suhu'] ?? '-',
-                    'nadi'              => $r['nadi'] ?? '-',
+                    'no_transaksi'  => $r['no_transaksi'],
+                    'tekanan_darah' => $r['tekanan_darah'] ?? '-',
+                    'suhu'          => $r['suhu'] ?? '-',
+                    'nadi'          => $r['nadi'] ?? '-',
                 ];
             }
         }
@@ -147,12 +157,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             if (!empty($r['nama_pelaksana']) && !isset($seenTenaga[$r['nama_pelaksana']])) {
                 $seenTenaga[$r['nama_pelaksana']] = true;
                 $stats['m_tenaga_kesehatan']++;
-                if (count($samples['m_tenaga_kesehatan']) < 15) {
-                    $samples['m_tenaga_kesehatan'][] = [
-                        'nama'         => $r['nama_pelaksana'],
-                        'jenis_tenaga' => 'Pelaksana',
-                    ];
-                }
             }
             $stats['t_tindakan']++;
             if (count($samples['t_tindakan']) < 15) {
@@ -170,7 +174,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 $seenTenaga[$r['resep_dokter']] = true;
                 $stats['m_tenaga_kesehatan']++;
             }
-
             $stats['t_resep']++;
             if (count($samples['t_resep']) < 15) {
                 $samples['t_resep'][] = [
@@ -220,7 +223,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     }
 }
 
-// Kalikan proporsional agar estimasi total keseluruhan akurat berdasarkan 318k baris
 if ($totalRows > $maxPreviewRows && $processedCount > 0) {
     $multiplier = $totalRows / $processedCount;
     foreach ($stats as $key => $val) {
@@ -229,7 +231,6 @@ if ($totalRows > $maxPreviewRows && $processedCount > 0) {
     }
 }
 
-// Susun struktur format output
 $sampleOutput = [];
 foreach ($stats as $key => $totalCount) {
     if ($key === 'raw_rows' || $key === 'skipped') continue;
@@ -239,11 +240,10 @@ foreach ($stats as $key => $totalCount) {
     ];
 }
 
-log_activity('preview_data', 'Preview cepat dan ringan berhasil diproses.');
-
 json_response([
-    'ok'     => true,
-    'msg'    => 'Preview berhasil dibuat.',
-    'stats'  => $stats,
-    'sample' => $sampleOutput,
+    'ok'       => true,
+    'batch_id' => $batchId,
+    'msg'      => 'Preview berhasil dibuat.',
+    'stats'    => $stats,
+    'sample'   => $sampleOutput,
 ]);
