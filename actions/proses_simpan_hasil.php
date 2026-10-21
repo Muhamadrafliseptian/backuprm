@@ -67,9 +67,11 @@ foreach ($rows as $row) {
 
     $parsedRows[] = $r;
     if (!empty($r['no_rm'])) $noRmList[$r['no_rm']] = true;
-    if (!empty($r['dokter'])) $dokterList[$r['dokter']] = true;
-    if (!empty($r['resep_dokter'])) $dokterList[$r['resep_dokter']] = true;
-    if (!empty($r['nama_pelaksana'])) $dokterList[$r['nama_pelaksana']] = true;
+    
+    // Kumpulkan SEMUA jenis dokter/nakes agar otomatis terdaftar di m_tenaga_kesehatan
+    if (!empty($r['dokter'])) $dokterList[trim($r['dokter'])] = true;
+    if (!empty($r['resep_dokter'])) $dokterList[trim($r['resep_dokter'])] = true;
+    if (!empty($r['nama_pelaksana'])) $dokterList[trim($r['nama_pelaksana'])] = true;
 }
 
 $pdo->beginTransaction();
