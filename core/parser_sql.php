@@ -266,7 +266,7 @@ function sql_parse_row(string $raw): array
         'status_perkawinan'   => parse_int($get('status_perkawinan')),
         'status_kepesertaan'  => parse_null($get('status_kepesertaan')),
         
-        // ANTROPOMETRI
+        // ANTROPOMETRI (Dibatasi ketat agar aman dari truncation)
         'tinggi_badan'        => $safeStr('tinggi_badan', 20),
         'berat_badan'         => $safeStr('berat_badan', 20),
 
@@ -300,11 +300,11 @@ function sql_parse_row(string $raw): array
 
         'lab_hasil_raw'       => null,
 
-        // RESEP
+        // RESEP (Sanitasi ketat resep_jumlah dan resep_aturan)
         'resep_nama_obat'     => parse_null($get('daftar_obat'))
                                   ?: parse_null($get('resep_raw')),
-        'resep_jumlah'        => parse_null($get('resep_jumlah')),
-        'resep_aturan'        => parse_null($get('resep_aturan')),
+        'resep_jumlah'        => $safeStr('resep_jumlah', 20),
+        'resep_aturan'        => $safeStr('resep_aturan', 50),
         'resep_dokter'        => parse_null($get('resep_dokter')),
         'resep_tanggal'       => parse_dt($get('resep_tanggal')),
         'resep_jam'           => parse_jam($get('resep_jam')),
