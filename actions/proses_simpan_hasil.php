@@ -338,6 +338,16 @@ try {
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
     }
+    
+    // Ambil detail baris data terakhir yang sedang diproses untuk debugging
+    $debugContext = '';
+    if (isset($row['raw_data'])) {
+        $debugContext = '<br><br><b>Data mentah penyebab error:</b><br><code style="font-size:10px; color:#d97706; background:#fffbeb; padding:4px; display:block; max-height:100px; overflow:auto;">' . htmlspecialchars($row['raw_data']) . '</code>';
+    }
+
     log_error('proses_simpan_hasil: ' . $e->getMessage());
-    json_response(['ok' => false, 'msg' => 'Gagal: ' . $e->getMessage()], 500);
+    json_response([
+        'ok'  => false, 
+        'msg' => 'Gagal pada ID Baris <b>' . ($row['id'] ?? '-') . '</b><br>Error: ' . $e->getMessage() . $debugContext
+    ], 500);
 }
