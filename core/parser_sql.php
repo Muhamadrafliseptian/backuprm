@@ -2,16 +2,15 @@
 /**
  * file   : parser_sql.php
  * path   : C:\xampp\htdocs\backuprm\core\parser_sql.php
- * fungsi : Parser SQL backup RME — index berdasarkan data asli (244 kolom)
+ * fungsi : Parser SQL backup RME — Mampu memecah multi-row INSERT SIKDA (244 kolom)
  */
 declare(strict_types=1);
 
 require_once __DIR__ . '/../bootstrap/internal_guard.php';
-
 require_once BASE_PATH . '/core/parser_helper.php';
 
 /* ============================================================
-   INDEX KOLOM (base 0) — diverifikasi dari data asli (244 kolom)
+   INDEX KOLOM (base 0) — 244 Kolom SIKDA
    ============================================================ */
 const COL = [
     // Header (kolom 0-45)
@@ -47,13 +46,6 @@ const COL = [
     'kode_provinsi_dom'      => 32,
     'no_telepon'             => 34,
     'no_telepon_alt'         => 35,
-    // FIX: peta indeks geser. Data SIKDA aktual (2962 baris, diverifikasi 30/09/2026):
-    //   idx 36 = PENDIDIKAN kode numerik (0-7) + teks ('TIDAK TAHU')
-    //   idx 37 = PEKERJAAN teks ('IBU R.TANGGA', 'PELAJAR', 'LAIN-LAIN', ...)
-    //   idx 38 = STATUS PERKAWINAN kode numerik (1-4)
-    //   idx 39 = NAMA PASIEN pada baris resep/anak (bukan kolom master)
-    // Sebelumnya 'pendidikan' => 37 sehingga kolom pendidikan menerima
-    // nilai pekerjaan ('IBU R.TANGGA' = 12 char) dan error 1406 Data too long.
     'pendidikan'             => 36,
     'pekerjaan'              => 37,
     'status_perkawinan'      => 38,
@@ -84,9 +76,9 @@ const COL = [
     'perawat'                => 198,
     'dokter_tindakan'        => 212,
 
-    // Tindakan (FIX: index disesuaikan dengan data aktual)
-    'tindakan_nama'          => 213,   // FIX: sebelumnya 214
-    'tindakan_pelaksana'     => 215,   // FIX: sebelumnya 212
+    // Tindakan
+    'tindakan_nama'          => 213,
+    'tindakan_pelaksana'     => 215,
     'tindakan_tanggal'       => 216,
     'tindakan_jam'           => 217,
 
@@ -103,158 +95,97 @@ const COL = [
     'tinggi_badan'           => 222,
     'berat_badan'            => 223,
 
-    // Lab (scan via helper)
+    // Lab
     'lab_hasil'              => 175,
 ];
 
-/* ============================================================
-   PARSE ROW
-   ============================================================ */
-function sql_parse_row(string $raw): array
-{
-    $v = sql_extract_values($raw);
-    if (empty($v)) return [];
-
-    $get = fn($key) => $v[COL[$key] ?? -1] ?? null;
-
-    return [
-        'no_transaksi'      => parse_null($get('id_backup')),
-        'tanggal_backup'    => parse_dt($get('tanggal_backup')),
-        'petugas_input'     => parse_null($get('petugas_input')),
-        'sumber_data'       => parse_null($get('sumber_data')),
-
-        // PASIEN
-        'nama'              => parse_null($get('nama')),
-        'no_rm'             => parse_null($get('no_rm')),
-        'nik'               => parse_null($get('nik')),
-        'no_asuransi_lain'  => parse_null($get('no_identitas_lain')),
-        'tempat_lahir'      => parse_null($get('tempat_lahir')),
-        'tanggal_lahir'     => parse_dt($get('tanggal_lahir')),
-        'jenis_kelamin'     => parse_int($get('jenis_kelamin')),
-        'agama'             => parse_null($get('agama')),
-        'alamat'            => parse_null($get('alamat')),
-        'rt'                => parse_null($get('rt')),
-        'rw'                => parse_null($get('rw')),
-        'kode_kelurahan'    => parse_null($get('kode_kelurahan')),
-        'kode_kecamatan'    => parse_null($get('kode_kecamatan')),
-        'kode_kabupaten_kota' => parse_null($get('kode_kabupaten_kota')),
-        'kode_pos'          => parse_null($get('kode_pos')),
-        'kode_provinsi'     => parse_null($get('kode_provinsi')),
-        'alamat_domisili'   => parse_null($get('alamat_domisili')),
-        'rt_domisili'       => parse_null($get('rt_domisili')),
-        'rw_domisili'       => parse_null($get('rw_domisili')),
-        'kode_kelurahan_domisili' => parse_null($get('kode_kelurahan_dom')),
-        'kode_kecamatan_domisili' => parse_null($get('kode_kecamatan_dom')),
-        'kode_kabupaten_domisili' => parse_null($get('kode_kabupaten_dom')),
-        'kode_pos_domisili' => parse_null($get('kode_pos_dom')),
-        'kode_provinsi_domisili'  => parse_null($get('kode_provinsi_dom')),
-        'no_telepon'        => parse_null($get('no_telepon')),
-        'no_telepon_alternatif' => parse_null($get('no_telepon_alt')),
-        'pendidikan'        => parse_null($get('pendidikan')),
-        'pekerjaan'         => parse_null($get('pekerjaan')),
-        'status_perkawinan' => parse_int($get('status_perkawinan')),
-        'status_kepesertaan'=> parse_null($get('status_kepesertaan')),
-        'tinggi_badan'      => parse_null($get('tinggi_badan')),
-        'berat_badan'       => parse_null($get('berat_badan')),
-
-        // KUNJUNGAN
-        'tanggal_kunjungan' => parse_dt($get('tanggal_kunjungan')),
-        'jam_kunjungan'     => parse_jam($get('jam_kunjungan')),
-
-        // PEMERIKSAAN
-        'kesadaran'         => parse_null($get('kesadaran')),
-        'nadi'              => parse_null($get('nadi')),
-        'respiratory_rate'  => parse_null($get('respiratory_rate')),
-        'tekanan_darah'     => parse_null($get('tekanan_darah')),
-        'sistole'           => parse_null($get('sistole')),
-        'diastole'          => parse_null($get('diastole')),
-        'suhu'              => parse_null($get('suhu')),
-
-        // DIAGNOSIS
-        'diagnosis_raw'     => parse_null($get('diagnosis_akhir'))
-                                ?: parse_null($get('diagnosis_awal')),
-
-        // TINDAKAN
-        'nama_tindakan'     => parse_null($get('tindakan_nama')),
-        'nama_pelaksana'    => parse_null($get('tindakan_pelaksana')),
-        'tanggal_tindakan'  => parse_dt($get('tindakan_tanggal')),
-        'jam_tindakan'      => parse_jam($get('tindakan_jam')),
-
-        // DOKTER (untuk tenaga_kesehatan)
-        'dokter'            => parse_null($get('dokter_umum'))
-                                ?: parse_null($get('dokter_tindakan'))
-                                ?: parse_null($get('resep_dokter')),
-
-        // LABORATORIUM
-        'lab_hasil_raw'     => null,   // di-scan via helper
-
-        // RESEP
-        'resep_nama_obat'   => parse_null($get('daftar_obat'))
-                                ?: parse_null($get('resep_raw')),
-        'resep_jumlah'      => parse_null($get('resep_jumlah')),
-        'resep_aturan'      => parse_null($get('resep_aturan')),
-        'resep_dokter'      => parse_null($get('resep_dokter')),
-        'resep_tanggal'     => parse_dt($get('resep_tanggal')),
-        'resep_jam'         => parse_jam($get('resep_jam')),
-
-        '_raw'              => $v,
-    ];
-}
-
-function sql_row_valid(array $r): bool
-{
-    return !empty($r['no_rm']) && !empty($r['no_transaksi']);
-}
-
 /**
- * Cek apakah ada data lab (scan semua value).
+ * Memecah baris SQL yang mengandung multi-row VALUES menjadi beberapa array row
  */
-function sql_row_has_lab(array $r): bool
+function sql_extract_all_tuples(string $sqlLine): array
 {
-    foreach ($r['_raw'] as $val) {
-        if ($val === null) continue;
-        $s = (string)$val;
-        if (stripos($s, 'hemoglobin') !== false) return true;
-        if (stripos($s, 'Ada data laboratorium') !== false) return true;
+    $rows = [];
+    $pos = stripos($sqlLine, 'VALUES');
+    if ($pos === false) return [];
+
+    $str = substr($sqlLine, $pos + 6);
+    $len = strlen($str);
+
+    $inStr = false;
+    $depth = 0;
+    $buf = '';
+
+    for ($i = 0; $i < $len; $i++) {
+        $c = $str[$i];
+
+        if ($inStr) {
+            if ($c === "'") {
+                if ($i + 1 < $len && $str[$i + 1] === "'") {
+                    $buf .= "'";
+                    $i++;
+                } else {
+                    $inStr = false;
+                }
+            } elseif ($c === '\\' && $i + 1 < $len) {
+                $buf .= $str[$i + 1];
+                $i++;
+            } else {
+                $buf .= $c;
+            }
+            continue;
+        }
+
+        if ($c === "'") {
+            $inStr = true;
+            continue;
+        }
+
+        if ($c === '(') {
+            if ($depth === 0) {
+                $buf = '';
+            } else {
+                $buf .= $c;
+            }
+            $depth++;
+            continue;
+        }
+
+        if ($c === ')') {
+            $depth--;
+            if ($depth === 0) {
+                $values = sql_parse_single_tuple($buf);
+                if (!empty($values)) {
+                    $rows[] = $values;
+                }
+                $buf = '';
+            } else {
+                $buf .= $c;
+            }
+            continue;
+        }
+
+        if ($depth > 0) {
+            $buf .= $c;
+        }
     }
-    return false;
+
+    return $rows;
 }
 
-/**
- * Ambil nilai lab dari raw row.
- */
-function sql_extract_lab_hasil(array $r): ?string
+function sql_parse_single_tuple(string $tupleStr): array
 {
-    foreach ($r['_raw'] as $val) {
-        if ($val === null) continue;
-        $s = (string)$val;
-        if (stripos($s, 'hemoglobin') !== false) return $s;
-    }
-    return null;
-}
-
-/* ============================================================
-   PARSE VALUES
-   ============================================================ */
-function sql_extract_values(string $line): array
-{
-    if (!preg_match('#VALUES\s*\((.*)\)\s*;?\s*$#is', $line, $m)) {
-        return [];
-    }
-    $raw = $m[1];
-
     $values = [];
-    $len = strlen($raw);
+    $len = strlen($tupleStr);
     $buf = '';
     $inStr = false;
     $i = 0;
 
     while ($i < $len) {
-        $c = $raw[$i];
+        $c = $tupleStr[$i];
 
         if ($inStr) {
             if ($c === "'") {
-                if ($i + 1 < $len && $raw[$i + 1] === "'") {
+                if ($i + 1 < $len && $tupleStr[$i + 1] === "'") {
                     $buf .= "'";
                     $i += 2;
                     continue;
@@ -264,7 +195,7 @@ function sql_extract_values(string $line): array
                 continue;
             }
             if ($c === '\\' && $i + 1 < $len) {
-                $buf .= $raw[$i + 1];
+                $buf .= $tupleStr[$i + 1];
                 $i += 2;
                 continue;
             }
@@ -286,4 +217,128 @@ function sql_extract_values(string $line): array
         if (strcasecmp($v, 'null') === 0) return null;
         return $v;
     }, $values);
+}
+
+function sql_parse_row(string $raw): array
+{
+    // Jika dikirim string query utuh, ekstrak tuple pertama
+    if (stripos($raw, 'INSERT') === 0 || stripos($raw, 'VALUES') !== false) {
+        $tuples = sql_extract_all_tuples($raw);
+        $v = $tuples[0] ?? [];
+    } else {
+        $v = sql_parse_single_tuple($raw);
+    }
+
+    if (empty($v)) return [];
+
+    $get = fn($key) => $v[COL[$key] ?? -1] ?? null;
+
+    return [
+        'no_transaksi'        => parse_null($get('id_backup')),
+        'tanggal_backup'      => parse_dt($get('tanggal_backup')),
+        'petugas_input'       => parse_null($get('petugas_input')),
+        'sumber_data'         => parse_null($get('sumber_data')),
+
+        // PASIEN
+        'nama'                => parse_null($get('nama')),
+        'no_rm'               => parse_null($get('no_rm')),
+        'nik'                 => parse_null($get('nik')),
+        'no_asuransi_lain'    => parse_null($get('no_identitas_lain')),
+        'tempat_lahir'        => parse_null($get('tempat_lahir')),
+        'tanggal_lahir'       => parse_dt($get('tanggal_lahir')),
+        'jenis_kelamin'       => parse_int($get('jenis_kelamin')),
+        'agama'               => parse_null($get('agama')),
+        'alamat'              => parse_null($get('alamat')),
+        'rt'                  => parse_null($get('rt')),
+        'rw'                  => parse_null($get('rw')),
+        'kode_kelurahan'      => parse_null($get('kode_kelurahan')),
+        'kode_kecamatan'      => parse_null($get('kode_kecamatan')),
+        'kode_kabupaten_kota' => parse_null($get('kode_kabupaten_kota')),
+        'kode_pos'            => parse_null($get('kode_pos')),
+        'kode_provinsi'       => parse_null($get('kode_provinsi')),
+        'alamat_domisili'     => parse_null($get('alamat_domisili')),
+        'rt_domisili'         => parse_null($get('rt_domisili')),
+        'rw_domisili'         => parse_null($get('rw_domisili')),
+        'kode_kelurahan_domisili' => parse_null($get('kode_kelurahan_dom')),
+        'kode_kecamatan_domisili' => parse_null($get('kode_kecamatan_dom')),
+        'kode_kabupaten_domisili' => parse_null($get('kode_kabupaten_dom')),
+        'kode_pos_domisili'   => parse_null($get('kode_pos_dom')),
+        'kode_provinsi_domisili'  => parse_null($get('kode_provinsi_dom')),
+        'no_telepon'          => parse_null($get('no_telepon')),
+        'no_telepon_alternatif'   => parse_null($get('no_telepon_alt')),
+        'pendidikan'          => parse_null($get('pendidikan')),
+        'pekerjaan'           => parse_null($get('pekerjaan')),
+        'status_perkawinan'   => parse_int($get('status_perkawinan')),
+        'status_kepesertaan'  => parse_null($get('status_kepesertaan')),
+        'tinggi_badan'        => parse_null($get('tinggi_badan')),
+        'berat_badan'         => parse_null($get('berat_badan')),
+
+        // KUNJUNGAN
+        'tanggal_kunjungan'   => parse_dt($get('tanggal_kunjungan')),
+        'jam_kunjungan'       => parse_jam($get('jam_kunjungan')),
+
+        // PEMERIKSAAN
+        'kesadaran'           => parse_null($get('kesadaran')),
+        'nadi'                => parse_null($get('nadi')),
+        'respiratory_rate'    => parse_null($get('respiratory_rate')),
+        'tekanan_darah'       => parse_null($get('tekanan_darah')),
+        'sistole'             => parse_null($get('sistole')),
+        'diastole'            => parse_null($get('diastole')),
+        'suhu'                => parse_null($get('suhu')),
+
+        // DIAGNOSIS
+        'diagnosis_raw'       => parse_null($get('diagnosis_akhir'))
+                                  ?: parse_null($get('diagnosis_awal')),
+
+        // TINDAKAN
+        'nama_tindakan'       => parse_null($get('tindakan_nama')),
+        'nama_pelaksana'      => parse_null($get('tindakan_pelaksana')),
+        'tanggal_tindakan'    => parse_dt($get('tindakan_tanggal')),
+        'jam_tindakan'        => parse_jam($get('tindakan_jam')),
+
+        // DOKTER
+        'dokter'              => parse_null($get('dokter_umum'))
+                                  ?: parse_null($get('dokter_tindakan'))
+                                  ?: parse_null($get('resep_dokter')),
+
+        'lab_hasil_raw'       => null,
+
+        // RESEP
+        'resep_nama_obat'     => parse_null($get('daftar_obat'))
+                                  ?: parse_null($get('resep_raw')),
+        'resep_jumlah'        => parse_null($get('resep_jumlah')),
+        'resep_aturan'        => parse_null($get('resep_aturan')),
+        'resep_dokter'        => parse_null($get('resep_dokter')),
+        'resep_tanggal'       => parse_dt($get('resep_tanggal')),
+        'resep_jam'           => parse_jam($get('resep_jam')),
+
+        '_raw'                => $v,
+    ];
+}
+
+function sql_row_valid(array $r): bool
+{
+    return !empty($r['no_rm']) || !empty($r['no_transaksi']);
+}
+
+function sql_row_has_lab(array $r): bool
+{
+    if (empty($r['_raw'])) return false;
+    foreach ($r['_raw'] as $val) {
+        if ($val === null) continue;
+        $s = (string)$val;
+        if (stripos($s, 'hemoglobin') !== false || stripos($s, 'Ada data laboratorium') !== false) return true;
+    }
+    return false;
+}
+
+function sql_extract_lab_hasil(array $r): ?string
+{
+    if (empty($r['_raw'])) return null;
+    foreach ($r['_raw'] as $val) {
+        if ($val === null) continue;
+        $s = (string)$val;
+        if (stripos($s, 'hemoglobin') !== false) return $s;
+    }
+    return null;
 }

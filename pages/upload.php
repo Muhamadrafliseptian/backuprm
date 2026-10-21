@@ -2,7 +2,7 @@
 /**
 - file   : pages/upload.php
 - path   : C:\xampp\htdocs\backuprm\pages\upload.php
-- fungsi : Upload File SQL besar (>1GB) dengan AUTO-SPLIT di browser per 100MB + Instant Parsing per Batch
+- fungsi : Frontend Auto-Split Importer (Virtual Safe-Cut Slice 100MB)
  */
 declare(strict_types=1);
 
@@ -31,7 +31,7 @@ try {
     <div>
         <h2 class="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">Upload Backup</h2>
         <p class="text-xs md:text-sm text-slate-500">
-            Auto-Split file <code class="text-mint-600 bg-mint-50 px-1.5 py-0.5 rounded">.sql</code> raksasa (>1 GB) langsung di aplikasi tanpa software eksternal.
+            Auto-Split file <code class="text-mint-600 bg-mint-50 px-1.5 py-0.5 rounded">.sql</code> raksasa (>1 GB) langsung di aplikasi secara aman.
         </p>
     </div>
 </div>
@@ -56,7 +56,7 @@ try {
                 <input type="file" name="sql_file" id="sql_file" accept=".sql" required
                        class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-mint-100 file:text-mint-700 file:text-xs file:font-semibold hover:file:bg-mint-200 focus:bg-white focus:border-mint-500 focus:ring-2 focus:ring-mint-100 focus:outline-none transition-all">
                 <p class="text-[11px] text-slate-400 mt-1">
-                    Aplikasi akan memotong file ini secara internal menjadi bagian 100MB dan memprosesnya bertahap.
+                    Sistem akan otomatis memotong file ini per ~100MB di baris aman dan memprosesnya bertahap.
                 </p>
             </div>
 
@@ -68,7 +68,6 @@ try {
                 </select>
             </div>
 
-            <!-- Progress Bar Baris & Bagian -->
             <div id="progressWrapper" class="hidden space-y-1">
                 <div class="flex justify-between text-xs text-slate-600 font-semibold">
                     <span id="progressText">Menyiapkan pemotongan file...</span>
@@ -99,7 +98,6 @@ try {
     </div>
 </div>
 
-<!-- Riwayat Upload -->
 <?php if ($recentBatches): ?>
 <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mt-6">
     <div class="p-5 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
@@ -177,9 +175,19 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    /* ============================================================
-       IN-BROWSER AUTO-SPLIT IMPORTER (VIRTUAL SLICE 100MB)
-       ============================================================ */
+    async function findSafeCutOffset(file, targetOffset) {
+        if (targetOffset >= file.size) return file.size;
+        const checkSize = 128 * 1024;
+        const blob = file.slice(targetOffset, Math.min(targetOffset + checkSize, file.size));
+        const text = await blob.text();
+        const newlinePos = text.indexOf('\n');
+        
+        if (newlinePos !== -1) {
+            return targetOffset + newlinePos + 1;
+        }
+        return targetOffset;
+    }
+
     const formUpload = document.getElementById('formUpload');
     if (formUpload) {
         formUpload.addEventListener('submit', async function (e) {
@@ -191,10 +199,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const file = fileInput.files[0];
             const initialMode = document.getElementById('mode').value;
 
-            // Ukuran per bagian dipotong di browser: 100 MB
-            const SPLIT_SIZE = 100 * 1024 * 1024;
-            const totalParts = Math.ceil(file.size / SPLIT_SIZE);
-
+            const TARGET_SPLIT_SIZE = 100 * 1024 * 1024; // 100 MB
             const progressWrapper = document.getElementById('progressWrapper');
             const progressBar = document.getElementById('progressBar');
             const progressText = document.getElementById('progressText');
@@ -204,22 +209,23 @@ document.addEventListener('DOMContentLoaded', function () {
             progressWrapper.classList.remove('hidden');
             btnUpload.disabled = true;
 
-            for (let partIndex = 0; partIndex < totalParts; partIndex++) {
-                const startByte = partIndex * SPLIT_SIZE;
-                const endByte = Math.min(startByte + SPLIT_SIZE, file.size);
-                
-                // Potong virtual file langsung di memori browser
+            let startByte = 0;
+            let partIndex = 1;
+
+            while (startByte < file.size) {
+                let rawTarget = startByte + TARGET_SPLIT_SIZE;
+                let endByte = await findSafeCutOffset(file, rawTarget);
+
                 const partBlob = file.slice(startByte, endByte);
-                const partName = `${file.name}.part${partIndex + 1}`;
-                const currentMode = (partIndex === 0) ? initialMode : 'append';
+                const partName = `${file.name}.part${partIndex}`;
+                const currentMode = (partIndex === 1) ? initialMode : 'append';
 
-                let percent = Math.round(((partIndex) / totalParts) * 100);
-                progressBar.style.width = percent + '%';
-                progressPercent.innerText = percent + '%';
-                progressText.innerText = `Memproses Bagian ${partIndex + 1} dari ${totalParts} (${Math.round((endByte - startByte)/1024/1024)} MB)...`;
+                let overallPercent = Math.round((startByte / file.size) * 100);
+                progressBar.style.width = overallPercent + '%';
+                progressPercent.innerText = overallPercent + '%';
+                progressText.innerText = `[1/2] Uploading Bagian ${partIndex} (~${Math.round((endByte - startByte)/1024/1024)} MB)...`;
 
-                // Kirim bagian 100MB ini via Chunk Upload biasa
-                const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB per transmisi
+                const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB per chunk upload
                 const totalChunks = Math.ceil(partBlob.size / CHUNK_SIZE);
                 const uploadId = 'UP-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
 
@@ -250,9 +256,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         let json = JSON.parse(text);
                         if (!json.ok) throw new Error(json.msg || 'Gagal upload kepingan.');
 
-                        // Setelah bagian 100MB selesai digabung di server, langsung jalankan parsing
                         if (json.finished) {
-                            progressText.innerText = `Mengurai Bagian ${partIndex + 1} ke database...`;
+                            progressText.innerText = `[2/2] Memproses Bagian ${partIndex} ke s_backup_raw...`;
 
                             const parseFd = new FormData();
                             parseFd.append('upload_id', json.upload_id);
@@ -278,25 +283,27 @@ document.addEventListener('DOMContentLoaded', function () {
                     btnUpload.disabled = false;
                     btnUpload.innerHTML = '<i class="ri-upload-cloud-line mr-1"></i> Mulai Auto-Split &amp; Import';
                     progressWrapper.classList.add('hidden');
-                    showError(`Gagal pada bagian ${partIndex + 1}`, err.toString());
+                    showError(`Gagal pada bagian ${partIndex}`, err.toString());
                     return;
                 }
+
+                startByte = endByte;
+                partIndex++;
             }
 
             progressBar.style.width = '100%';
             progressPercent.innerText = '100%';
-            progressText.innerText = 'Seluruh file 1.4 GB selesai diproses!';
+            progressText.innerText = 'Seluruh data 1.4 GB selesai diproses!';
 
             Swal.fire({
                 icon: 'success',
-                title: 'Berhasil Memproses File 1.4 GB!',
-                text: `File telah dipotong otomatis menjadi ${totalParts} bagian dan tersimpan di s_backup_raw.`,
+                title: 'Berhasil!',
+                text: `Semua data 1.4 GB berhasil diuraikan dan tersimpan di s_backup_raw. Klik 'Preview Data' atau 'Preview & Simpan' untuk generate ke tabel akhir.`,
                 confirmButtonColor: '#10b981'
             }).then(() => location.reload());
         });
     }
 
-    // Preview & Clear
     const btnPreview = document.getElementById('btnPreview');
     if (btnPreview) {
         btnPreview.addEventListener('click', function () {
