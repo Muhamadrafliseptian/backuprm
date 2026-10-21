@@ -161,6 +161,10 @@ try {
         $fileName, $mode, $inserted, $importBatch
     ));
 
+    if (ob_get_level()) {
+        ob_end_clean();
+    }
+
     json_response([
         'ok'       => true,
         'msg'      => "Berhasil memproses dan menyimpan {$inserted} baris data ke database.",
