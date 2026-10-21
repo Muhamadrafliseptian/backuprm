@@ -1,14 +1,12 @@
 <?php
 /**
-- file   : proses_upload_chunk.php
-- path   : C:\xampp\htdocs\backuprm\actions\proses_upload_chunk.php
-- fungsi : Menerima chunk file SQL dari frontend dan menggabungkannya secara aman
+
  */
 declare(strict_types=1);
 
 require_once __DIR__ . '/../bootstrap/internal_guard.php';
 
-csrf_check_or_die();
+// csrf_check_or_die();
 set_time_limit(600);
 ini_set('memory_limit', '1024M');
 
