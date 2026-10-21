@@ -19,7 +19,7 @@ if (!auth_check()) {
 }
 
 $lastId = (int)($_POST['last_id'] ?? 0);
-$limit  = 2000; 
+$limit  = 10000; 
 
 $pdo = db();
 
