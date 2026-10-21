@@ -29,4 +29,5 @@ return [
     'mark-verified'   => 'proses_mark_verified.php',
     'download-backup' => 'proses_download_backup.php',
     'upload-chunk'    => 'proses_upload_chunk.php',
+    'parse-sql-file'    => 'proses_parse_sql.php',
 ];
