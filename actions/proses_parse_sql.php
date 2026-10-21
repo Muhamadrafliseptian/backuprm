@@ -39,7 +39,7 @@ try {
     $fileHash = hash_file_sha256($finalFile);
     $fileSize = filesize($finalFile);
 
-    $stmtBatch =$pdo->prepare("
+    $stmtBatch = $pdo->prepare("
         INSERT INTO s_upload_batch
             (batch_id, uploaded_by, uploaded_by_nrk, uploaded_by_nama, uploaded_at, file_name, file_size, file_hash, mode, status)
         VALUES
@@ -48,9 +48,9 @@ try {
     ");
     $stmtBatch->execute([
         ':bid'   => $importBatch,
-        ':uid'   => auth_user_id(),
-        ':unrk'  => auth_nrk(),
-        ':unama' => auth_nama(),
+        ':uid'   => function_exists('auth_id') ? auth_id() : null, // Diubah dari auth_user_id() ke auth_id()
+        ':unrk'  => function_exists('auth_nrk') ? auth_nrk() : null,
+        ':unama' => function_exists('auth_nama') ? auth_nama() : 'Admin',
         ':fname' => $fileName,
         ':fsize' => $fileSize,
         ':fhash' => $fileHash,
