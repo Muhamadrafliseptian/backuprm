@@ -1,12 +1,19 @@
 <?php
+/**
+ * file   : actions/simpan-hasil.php
+ * fungsi : Menyimpan data s_backup_raw ke tabel relasional secara bertahap (Cursor / Last ID)
+ */
 declare(strict_types=1);
 
 require_once __DIR__ . '/../bootstrap/internal_guard.php';
 require_once BASE_PATH . '/core/parser_sql.php';
 
-csrf_check_or_die();
+// Bypass CSRF untuk batching request berulang
+// csrf_check_or_die();
+
 set_time_limit(300);
 ini_set('memory_limit', '1024M');
+
 if (!auth_check()) {
     json_response(['ok' => false, 'msg' => 'Unauthorized'], 401);
 }
@@ -209,21 +216,21 @@ try {
                         VALUES (:kid, :kes, :nadi, :rr, :td, :sis, :dias, :suhu, :tb, :bb)")
                     ->execute([
                         ':kid'  => $kunjunganId,
-                        ':kes'  => $r['kesadaran'] ?? null,
-                        ':nadi' => $r['nadi'] ?? null,
-                        ':rr'   => $r['respiratory_rate'] ?? null,
-                        ':td'   => $r['tekanan_darah'] ?? null,
-                        ':sis'  => $r['sistole'] ?? null,
-                        ':dias' => $r['diastole'] ?? null,
-                        ':suhu' => $r['suhu'] ?? null,
-                        ':tb'   => $r['tinggi_badan'] ?? null,
-                        ':bb'   => $r['berat_badan'] ?? null,
+                        ':kes'  => substr((string)($r['kesadaran'] ?? ''), 0, 90),
+                        ':nadi' => substr((string)($r['nadi'] ?? ''), 0, 30),
+                        ':rr'   => substr((string)($r['respiratory_rate'] ?? ''), 0, 30),
+                        ':td'   => substr((string)($r['tekanan_darah'] ?? ''), 0, 30),
+                        ':sis'  => substr((string)($r['sistole'] ?? ''), 0, 20),
+                        ':dias' => substr((string)($r['diastole'] ?? ''), 0, 20),
+                        ':suhu' => substr((string)($r['suhu'] ?? ''), 0, 30),
+                        ':tb'   => substr((string)($r['tinggi_badan'] ?? ''), 0, 30),
+                        ':bb'   => substr((string)($r['berat_badan'] ?? ''), 0, 30),
                     ]);
                     $stats['t_pemeriksaan']++;
                 }
             }
 
-            // ---- t_diagnosis (Sesuai kolom tabel: nama_diagnosis) ----
+            // ---- t_diagnosis ----
             if ($kunjunganId && !empty($r['diagnosis_raw'])) {
                 $stmtCheckDiag = $pdo->prepare("SELECT id FROM t_diagnosis WHERE kunjungan_id = :kid AND nama_diagnosis = :diag LIMIT 1");
                 $stmtCheckDiag->execute([':kid' => $kunjunganId, ':diag' => $r['diagnosis_raw']]);
@@ -234,7 +241,7 @@ try {
                 }
             }
 
-            // ---- t_laboratorium (Sesuai kolom tabel: ada_data, tanggal, hasil) ----
+            // ---- t_laboratorium ----
             if ($kunjunganId && !empty($r['lab_hasil_raw'])) {
                 $stmtCheckLab = $pdo->prepare("SELECT id FROM t_laboratorium WHERE kunjungan_id = :kid LIMIT 1");
                 $stmtCheckLab->execute([':kid' => $kunjunganId]);

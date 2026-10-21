@@ -64,9 +64,9 @@ const COL = [
     'diastole'               => 77,
     'suhu'                   => 78,
 
-    // Antropometri (TB & BB) - Pastikan indeks ini tepat sesuai urutan SIKDA
-    'berat_badan'            => 222, // Sesuai contoh: '72' (kg)
-    'tinggi_badan'           => 223, // Sesuai contoh: '18' atau '0.60' (cm/m)
+    // Antropometri (TB & BB) — Indeks Angka Presisi
+    'berat_badan'            => 222,
+    'tinggi_badan'           => 223,
 
     // Diagnosis
     'diagnosis_awal'         => 65,
@@ -95,9 +95,6 @@ const COL = [
     'resep_jam'              => 240,
 ];
 
-/**
- * Memecah baris SQL yang mengandung multi-row VALUES menjadi beberapa array row
- */
 function sql_extract_all_tuples(string $sqlLine): array
 {
     $rows = [];
@@ -228,7 +225,7 @@ function sql_parse_row(string $raw): array
 
     $get = fn($key) => $v[COL[$key] ?? -1] ?? null;
 
-    // Fungsi sanitasi panjang string agar aman dari error 1406 (Data too long)
+    // Helper sanitasi string agar aman dimasukkan ke database
     $safeStr = fn($key, $max = 95) => substr((string)($get($key) ?? ''), 0, $max);
 
     return [
@@ -269,7 +266,7 @@ function sql_parse_row(string $raw): array
         'status_perkawinan'   => parse_int($get('status_perkawinan')),
         'status_kepesertaan'  => parse_null($get('status_kepesertaan')),
         
-        // ANTROPOMETRI (Dibatasi agar aman)
+        // ANTROPOMETRI
         'tinggi_badan'        => $safeStr('tinggi_badan', 20),
         'berat_badan'         => $safeStr('berat_badan', 20),
 
@@ -277,7 +274,7 @@ function sql_parse_row(string $raw): array
         'tanggal_kunjungan'   => parse_dt($get('tanggal_kunjungan')),
         'jam_kunjungan'       => parse_jam($get('jam_kunjungan')),
 
-        // PEMERIKSAAN (Sanitasi string ketat)
+        // PEMERIKSAAN
         'kesadaran'           => $safeStr('kesadaran', 95),
         'nadi'                => $safeStr('nadi', 30),
         'respiratory_rate'    => $safeStr('respiratory_rate', 30),
