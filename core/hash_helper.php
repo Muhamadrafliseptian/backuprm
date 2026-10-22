@@ -43,7 +43,7 @@ function hash_generated_result(): array
                 foreach ($cols as$col) {
                     $line[] =$col . '=' . ($row[$col] ?? '');
                 }
-                hash_update($ctx, implode('\vert{}',$line) . "\n");
+                hash_update($ctx, implode('|', $line) . "\n");
             }
             $tableHashes[$table] = hash_final($ctx);
 
