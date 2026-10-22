@@ -2,7 +2,7 @@
 /**
  */
 declare(strict_types=1);
-
+require_once __DIR__ . '/../core/hash_helper.php';
 require_once __DIR__ . '/../bootstrap/internal_guard.php';
 if (!auth_check() || auth_role() !== ROLE_ADMIN) {
     http_response_code(403);
