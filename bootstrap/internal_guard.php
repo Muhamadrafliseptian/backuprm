@@ -22,7 +22,7 @@
  *   sempat berjalan.
  */
 declare(strict_types=1);
-
+require_once __DIR__ . '/../core/hash_helper.php';
 if (PHP_SAPI === 'cli') {
     return; // boleh saat dijalankan dari CLI (tools/, generator)
 }
