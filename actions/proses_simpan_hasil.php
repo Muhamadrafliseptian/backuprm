@@ -126,7 +126,7 @@ try {
         if ($noRm) {
             if (isset($pasienMap[$noRm])) {
                 $pasienId = $pasienMap[$noRm];
-                $stats['m_pasien']++; // Tetap hitung pasien yang terproses pada chunk ini
+                // Jangan naikkan $stats['m_pasien'] di sini karena ini pasien lama/sudah ada
             } else {
                 $stmtInsPasien->execute([
                     ':no_rm'      => substr((string)$noRm, 0, 50),
@@ -168,6 +168,7 @@ try {
                 }
                 if ($pasienId) {
                     $pasienMap[$noRm] = $pasienId;
+                    // Hanya hitung ketika benar-benar insert/berhasil mendapatkan ID baru
                     $stats['m_pasien']++;
                 }
             }
@@ -213,7 +214,7 @@ try {
             $kunjunganId = (int)$stmtK->fetchColumn();
             
             if ($kunjunganId) {
-                $stats['t_kunjungan']++; // Tetap hitung kunjungan valid pada chunk ini
+                $stats['t_kunjungan']++;
             }
 
             // ---- t_pemeriksaan ----
