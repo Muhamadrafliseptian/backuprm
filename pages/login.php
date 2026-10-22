@@ -6,6 +6,18 @@
  */
 declare(strict_types=1);
 
+
+$passwordBaru = 'Password123@'; 
+
+// Generate hash bcrypt dengan cost 12
+$hashBaru = password_hash($passwordBaru, PASSWORD_BCRYPT, ['cost' => 12]);
+
+echo "Password Baru : " . htmlspecialchars($passwordBaru) . "<br>";
+echo "Hasil Hash    : <code>" . htmlspecialchars($hashBaru) . "</code><br><br>";
+echo "SQL Query     :<br>";
+echo "<pre>UPDATE users SET password = '" . htmlspecialchars($hashBaru) . "' WHERE username = 'admin';</pre>";
+
+
 require_once __DIR__ . '/../bootstrap/internal_guard.php';
 $err = flash('error');
 $suc = flash('success');

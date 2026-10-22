@@ -1,91 +1,6 @@
 <?php
 /**
- * file   : hash_helper.php
- * path   : C:\xampp\htdocs\backuprm\core\hash_helper.php
- * fungsi : Fungsi hashing untuk verifikasi integritas data upload
- *
- * FIX: placeholder duplikat (:bid dipakai 2x) → dipisah jadi :bid1 dan :bid2
- *      karena MySQL prepared statement tidak boleh pakai placeholder sama > 1x.
- */
-declare(strict_types=1);
-
-require_once __DIR__ . '/../bootstrap/internal_guard.php';
-
-/**
- * Hitung SHA256 dari file fisik.
- */
-function hash_file_sha256(string $filePath): ?string
-{
-    if (!file_exists($filePath) || !is_readable($filePath)) {
-        return null;
-    }
-    $hash = hash_file('sha256', $filePath);
-    return $hash !== false ? $hash : null;
-}
-
-/**
- * Hitung SHA256 dari string.
- */
-function hash_string_sha256(string $content): string
-{
-    return hash('sha256', $content);
-}
-
-/**
- * Hitung hash dari hasil query (konsisten, terurut).
- */
-function hash_result_set(array $rows, array $columns = []): string
-{
-    if (empty($rows)) {
-        return hash('sha256', 'EMPTY');
-    }
-
-    if (empty($columns)) {
-        $columns = array_keys($rows[0]);
-    }
-
-    sort($columns);
-
-    $ctx = hash_init('sha256');
-    foreach ($rows as $row) {
-        $line = [];
-        foreach ($columns as $col) {
-            $line[] = $col . '=' . ($row[$col] ?? '');
-        }
-        hash_update($ctx, implode('|', $line) . "\n");
-    }
-    return hash_final($ctx);
-}
-
-/**
- * Hitung hash dari s_backup_raw — berdasarkan raw_data saja (terurut by id).
- *
- * FIX: gunakan 2 placeholder berbeda (:bid1, :bid2) untuk query OR.
- */
-function hash_backup_raw(?string $batchId = null): string
-{
-    $sql = "SELECT id, raw_data FROM s_backup_raw";
-    $params = [];
-
-    if ($batchId !== null && $batchId !== '') {
-        $sql .= " WHERE batch_id = :bid1 OR import_batch = :bid2";
-        $params[':bid1'] = $batchId;
-        $params[':bid2'] = $batchId;
-    }
-    $sql .= " ORDER BY id ASC";
-
-    $stmt = db()->prepare($sql);
-    $stmt->execute($params);
-
-    $ctx = hash_init('sha256');
-    while ($row = $stmt->fetch()) {
-        hash_update($ctx, $row['raw_data'] . "\n");
-    }
-    return hash_final($ctx);
-}
-
-/**
- * Hitung hash dari hasil generate (10 tabel) — ringkasan agregat.
+ * Hitung hash dari hasil generate (10 tabel) — ringkasan agregat secara streaming (aman dari memory limit).
  */
 function hash_generated_result(): array
 {
@@ -104,27 +19,42 @@ function hash_generated_result(): array
         't_laboratorium'     => ['id', 'kunjungan_id', 'hasil'],
     ];
 
-    $tableHashes = [];
-    $tableCounts = [];
+    $tableHashes = [];$tableCounts = [];
 
-    foreach ($tables as $table => $cols) {
-        $colList = implode(', ', array_map(fn($c) => "`{$c}`", $cols));
-
+    foreach ($tables as $table =>$cols) {
+        // Ambil jumlah total baris terlebih dahulu
         try {
+            $countStmt =$pdo->query("SELECT COUNT(*) FROM `{$table}`");
+            $totalRows = (int)$countStmt->fetchColumn();$tableCounts[$table] =$totalRows;
+
+            if ($totalRows === 0) {
+                $tableHashes[$table] = hash('sha256', 'EMPTY');
+                continue;
+            }
+
+            sort($cols);
+            $colList = implode(', ', array_map(fn($c) => "`{$c}`", $cols));
+
+            // Gunakan unbuffered query atau cursor fetch satu per satu agar RAM tidak jebol
             $stmt = $pdo->query("SELECT {$colList} FROM `{$table}` ORDER BY id ASC");
-            $rows = $stmt->fetchAll();
+            
+            $ctx = hash_init('sha256');
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {$line = [];
+                foreach ($cols as$col) {
+                    $line[] =$col . '=' . ($row[$col] ?? '');
+                }
+                hash_update($ctx, implode('\vert{}',$line) . "\n");
+            }
+            $tableHashes[$table] = hash_final($ctx);
+
         } catch (Throwable $e) {
             $tableHashes[$table] = 'ERROR';
             $tableCounts[$table] = 0;
-            continue;
         }
-
-        $tableCounts[$table] = count($rows);
-        $tableHashes[$table] = hash_result_set($rows, $cols);
     }
 
     $ctx = hash_init('sha256');
-    foreach ($tableHashes as $t => $h) {
+    foreach ($tableHashes as $t =>$h) {
         hash_update($ctx, "{$t}:{$h}\n");
     }
     $resultHash = hash_final($ctx);
@@ -134,12 +64,4 @@ function hash_generated_result(): array
         'per_table' => $tableHashes,
         'counts'    => $tableCounts,
     ];
-}
-
-/**
- * Buat batch_id unik.
- */
-function generate_batch_id(): string
-{
-    return 'BATCH-' . date('Ymd-His') . '-' . bin2hex(random_bytes(3));
 }

@@ -18,17 +18,33 @@ if (!auth_check()) {
     json_response(['ok' => false, 'msg' => 'Unauthorized'], 401);
 }
 
-$lastId = (int)($_POST['last_id'] ?? 0);
-$limit  = 2000; 
+$lastId  = (int)($_POST['last_id'] ?? 0);
+$batchId = trim($_POST['batch_id'] ?? '');
+$limit   = 10000; 
 
 $pdo = db();
 
-$totalRows = (int)$pdo->query("SELECT COUNT(*) FROM s_backup_raw")->fetchColumn();
+// Hitung total baris berdasarkan batch_id jika ada, atau seluruh tabel s_backup_raw
+if ($batchId !== '') {
+    $stmtCount = $pdo->prepare("SELECT COUNT(*) FROM s_backup_raw WHERE batch_id = :bid");
+    $stmtCount->execute([':bid' => $batchId]);
+    $totalRows = (int)$stmtCount->fetchColumn();
+} else {
+    $totalRows = (int)$pdo->query("SELECT COUNT(*) FROM s_backup_raw")->fetchColumn();
+}
+
 if ($totalRows === 0) {
     json_response(['ok' => false, 'msg' => 'Tidak ada data di s_backup_raw.'], 400);
 }
 
-$stmtFetch = $pdo->prepare("SELECT id, source_row_id, raw_data FROM s_backup_raw WHERE id > :last_id ORDER BY id ASC LIMIT :lim");
+// Ambil data dengan filter batch_id jika disediakan
+if ($batchId !== '') {
+    $stmtFetch = $pdo->prepare("SELECT id, source_row_id, raw_data FROM s_backup_raw WHERE batch_id = :bid AND id > :last_id ORDER BY id ASC LIMIT :lim");
+    $stmtFetch->bindValue(':bid', $batchId, PDO::PARAM_STR);
+} else {
+    $stmtFetch = $pdo->prepare("SELECT id, source_row_id, raw_data FROM s_backup_raw WHERE id > :last_id ORDER BY id ASC LIMIT :lim");
+}
+
 $stmtFetch->bindValue(':last_id', $lastId, PDO::PARAM_INT);
 $stmtFetch->bindValue(':lim', $limit, PDO::PARAM_INT);
 $stmtFetch->execute();
@@ -118,6 +134,9 @@ try {
         (pasien_id, no_transaksi, tanggal_kunjungan, jam_kunjungan, sumber_data, tanggal_backup, petugas_input, status)
         VALUES (:pid, :nt, :tgl, :jam, :sumber, :tgl_bck, :petugas, 'selesai')");
 
+    // Cache transaksi kunjungan dalam chunk ini agar statistik t_kunjungan tidak double menghitung baris pecahan
+    $processedKunjunganChunk = [];
+
     foreach ($parsedRows as $r) {
         // --- m_pasien ---
         $noRm = $r['no_rm'] ?? null;
@@ -126,7 +145,6 @@ try {
         if ($noRm) {
             if (isset($pasienMap[$noRm])) {
                 $pasienId = $pasienMap[$noRm];
-                // Jangan naikkan $stats['m_pasien'] di sini karena ini pasien lama/sudah ada
             } else {
                 $stmtInsPasien->execute([
                     ':no_rm'      => substr((string)$noRm, 0, 50),
@@ -168,7 +186,6 @@ try {
                 }
                 if ($pasienId) {
                     $pasienMap[$noRm] = $pasienId;
-                    // Hanya hitung ketika benar-benar insert/berhasil mendapatkan ID baru
                     $stats['m_pasien']++;
                 }
             }
@@ -199,9 +216,11 @@ try {
         // --- t_kunjungan ---
         $kunjunganId = null;
         if (!empty($r['no_transaksi']) && $pasienId) {
+            $noTransaksi = (string)$r['no_transaksi'];
+
             $stmtInsKunjungan->execute([
                 ':pid'     => $pasienId,
-                ':nt'      => substr((string)$r['no_transaksi'], 0, 100),
+                ':nt'      => substr($noTransaksi, 0, 100),
                 ':tgl'     => $r['tanggal_kunjungan'] ?? null,
                 ':jam'     => $r['jam_kunjungan'] ?? null,
                 ':sumber'  => substr((string)($r['sumber_data'] ?? ''), 0, 50),
@@ -210,10 +229,12 @@ try {
             ]);
             
             $stmtK = $pdo->prepare("SELECT id FROM t_kunjungan WHERE no_transaksi = :nt LIMIT 1");
-            $stmtK->execute([':nt' => $r['no_transaksi']]);
+            $stmtK->execute([':nt' => $noTransaksi]);
             $kunjunganId = (int)$stmtK->fetchColumn();
             
-            if ($kunjunganId) {
+            // Hanya hitung statistik t_kunjungan sekali per no_transaksi dalam eksekusi ini
+            if ($kunjunganId && !isset($processedKunjunganChunk[$noTransaksi])) {
+                $processedKunjunganChunk[$noTransaksi] = true;
                 $stats['t_kunjungan']++;
             }
 
@@ -331,16 +352,25 @@ try {
         $resultHashData = hash_generated_result();
         $resultHash     = $resultHashData['hash'];
 
-        // HANYA update batch yang sedang aktif/terakhir di-upload
-        $stmtB = $pdo->query("SELECT id FROM s_upload_batch WHERE status IN ('uploaded','generated') ORDER BY uploaded_at DESC LIMIT 1");
-        $batchId = $stmtB->fetchColumn();
-        if ($batchId) {
-            $pdo->prepare("UPDATE s_upload_batch SET result_hash = :rhash, status = 'generated', verify_detail = :detail WHERE id = :id")
+        // Update status batch aktif
+        if ($batchId !== '') {
+            $pdo->prepare("UPDATE s_upload_batch SET result_hash = :rhash, status = 'generated', verify_detail = :detail WHERE batch_id = :bid")
                 ->execute([
                     ':rhash'  => $resultHash, 
                     ':detail' => json_encode($resultHashData), 
-                    ':id'     => $batchId
+                    ':bid'    => $batchId
                 ]);
+        } else {
+            $stmtB = $pdo->query("SELECT id FROM s_upload_batch WHERE status IN ('uploaded','generated') ORDER BY uploaded_at DESC LIMIT 1");
+            $batchIdRec = $stmtB->fetchColumn();
+            if ($batchIdRec) {
+                $pdo->prepare("UPDATE s_upload_batch SET result_hash = :rhash, status = 'generated', verify_detail = :detail WHERE id = :id")
+                    ->execute([
+                        ':rhash'  => $resultHash, 
+                        ':detail' => json_encode($resultHashData), 
+                        ':id'     => $batchIdRec
+                    ]);
+            }
         }
     }
 

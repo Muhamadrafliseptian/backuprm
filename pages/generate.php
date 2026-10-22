@@ -358,20 +358,29 @@ $countRaw = (int)db()->query("SELECT COUNT(*) FROM s_backup_raw")->fetchColumn()
             'Total ' + totalAll.toLocaleString('id-ID') + ' baris akan disimpan ke database.';
         document.getElementById('actionBar').classList.remove('hidden');
 
+        /* ---------- Ambil batch_id dari URL ---------- */
+        const urlParams = new URLSearchParams(window.location.search);
+        const batchId = urlParams.get('batch') || '';
+
         /* ---------- Bind Simpan ---------- */
-        document.getElementById('btnSimpan').addEventListener('click', function () {
-            handleSimpan(totalAll);
+        const btnSimpan = document.getElementById('btnSimpan');
+        // Hindari duplikasi event listener jika fungsi terpanggil ulang
+        const newBtnSimpan = btnSimpan.cloneNode(true);
+        btnSimpan.parentNode.replaceChild(newBtnSimpan, btnSimpan);
+
+        newBtnSimpan.addEventListener('click', function () {
+            handleSimpan(totalAll, batchId);
         });
     }
 
     /* ============================================================
        HANDLE SIMPAN (DENGAN KEYSET PAGINATION / LAST_ID)
        ============================================================ */
-    function handleSimpan(totalAll) {
+       function handleSimpan(totalAll, batchId) {
         Swal.fire({
             icon: 'question',
             title: 'Simpan ke Database?',
-            html: 'Anda akan menyimpan <b>' + totalAll.toLocaleString('id-ID') + '</b> baris ke database secara bertahap.<br><br>' +
+            html: 'Anda akan menyimpan <b>' + totalAll.toLocaleString('id-ID') + '</b> baris ke database secara bertahap untuk batch ini.<br><br>' +
                   '<small class="text-muted">Proses ini menggunakan Cursor Pagination (Aman dari timeout).</small>',
             showCancelButton: true,
             confirmButtonText: 'Ya, Mulai Simpan',
@@ -390,13 +399,13 @@ $countRaw = (int)db()->query("SELECT COUNT(*) FROM s_backup_raw")->fetchColumn()
                 allowEscapeKey: false,
                 didOpen: () => {
                     Swal.showLoading();
-                    sendBatchSimpan(0, totalAll, {});
+                    sendBatchSimpan(0, totalAll, {}, batchId);
                 }
             });
         });
     }
 
-    function sendBatchSimpan(lastId, totalAll, accumulatedStats) {
+    function sendBatchSimpan(lastId, totalAll, accumulatedStats, batchId) {
         fetch(window.u('/actions/simpan-hasil'), {
             method: 'POST',
             headers: {
@@ -404,7 +413,7 @@ $countRaw = (int)db()->query("SELECT COUNT(*) FROM s_backup_raw")->fetchColumn()
                 'X-CSRF-TOKEN': window.CSRF_TOKEN,
                 'Content-Type': 'application/x-www-form-urlencoded'
             },
-            body: 'last_id=' + lastId
+            body: 'last_id=' + lastId + '&batch_id=' + encodeURIComponent(batchId)
         })
         .then(async (res) => {
             const text = await res.text();
@@ -430,8 +439,8 @@ $countRaw = (int)db()->query("SELECT COUNT(*) FROM s_backup_raw")->fetchColumn()
             }
 
             if (!json.finished) {
-                // Lanjut ke batch berikutnya menggunakan last_id
-                sendBatchSimpan(json.last_id, totalAll, accumulatedStats);
+                // Lanjut ke batch berikutnya menggunakan last_id dan batch_id yang sama
+                sendBatchSimpan(json.last_id, totalAll, accumulatedStats, batchId);
             } else {
                 // Selesai sepenuhnya
                 sessionStorage.removeItem('preview_data');
@@ -439,7 +448,7 @@ $countRaw = (int)db()->query("SELECT COUNT(*) FROM s_backup_raw")->fetchColumn()
                 Swal.fire({
                     icon: 'success',
                     title: 'Berhasil Disimpan!',
-                    html: 'Seluruh data berhasil disimpan ke database.<br><br>' +
+                    html: 'Seluruh data batch ini berhasil disimpan ke database.<br><br>' +
                           '<small class="text-muted">Total Pasien Baru: ' + (accumulatedStats.m_pasien || 0) +
                           ', Kunjungan: ' + (accumulatedStats.t_kunjungan || 0) + '</small>',
                     confirmButtonColor: '#10b981',
