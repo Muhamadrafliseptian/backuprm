@@ -224,92 +224,113 @@ function sql_parse_row(string $raw): array
     if (empty($v)) return [];
 
     $get = fn($key) => $v[COL[$key] ?? -1] ?? null;
+    $safeStr = fn($val, $max = 95) => substr((string)($val ?? ''), 0, $max);
 
-    // Helper sanitasi string agar aman dimasukkan ke database
-    $safeStr = fn($key, $max = 95) => substr((string)($get($key) ?? ''), 0, $max);
+    // Deteksi cerdas untuk vital sign jika terjadi pergeseran kolom
+    $kesadaran = parse_null($get('kesadaran'));
+    $vitalRaw  = parse_null($get('vital_sign_raw'));
+    $nadi      = parse_null($get('nadi'));
+    $rr        = parse_null($get('respiratory_rate'));
+    $td        = parse_null($get('tekanan_darah'));
+    $sistole   = parse_null($get('sistole'));
+    $diastole  = parse_null($get('diastole'));
+    $suhu      = parse_null($get('suhu'));
+
+    // Jika kolom suhu ternyata berisi string panjang/gabungan vital sign, parse otomatis dari teksnya
+    if (strpos((string)$vitalRaw, 'Suhu') !== false || strpos((string)$kesadaran, 'Nadi') !== false) {
+        // Fallback pencarian dari string gabungan jika indeks meleset
+        $combinedText = ($kesadaran ?? '') . ' ' . ($vitalRaw ?? '');
+        if (preg_match('/Nadi\s*([0-9.]+)/i', $combinedText, $m)) $nadi = $m[1];
+        if (preg_match('/RR\s*([0-9.]+)/i', $combinedText, $m)) $rr = $m[1];
+        if (preg_match('/TD\s*([0-9\/]+)/i', $combinedText, $m)) $td = $m[1];
+        if (preg_match('/Suhu\s*([0-9.]+)/i', $combinedText, $m)) $suhu = $m[1];
+        if (stripos($kesadaran, 'Compos Mentis') !== false) {
+            $kesadaran = 'Compos Mentis';
+        }
+    }
 
     return [
-        'no_transaksi'        => parse_null($get('id_backup')),
-        'tanggal_backup'      => parse_dt($get('tanggal_backup')),
-        'petugas_input'       => parse_null($get('petugas_input')),
-        'sumber_data'         => parse_null($get('sumber_data')),
+        'no_transaksi'            => parse_null($get('id_backup')),
+        'tanggal_backup'          => parse_dt($get('tanggal_backup')),
+        'petugas_input'           => parse_null($get('petugas_input')),
+        'sumber_data'             => parse_null($get('sumber_data')),
 
         // PASIEN
-        'nama'                => parse_null($get('nama')),
-        'no_rm'               => parse_null($get('no_rm')),
-        'nik'                 => parse_null($get('nik')),
-        'no_asuransi_lain'    => parse_null($get('no_identitas_lain')),
-        'tempat_lahir'        => parse_null($get('tempat_lahir')),
-        'tanggal_lahir'       => parse_dt($get('tanggal_lahir')),
-        'jenis_kelamin'       => parse_int($get('jenis_kelamin')),
-        'agama'               => parse_null($get('agama')),
-        'alamat'              => parse_null($get('alamat')),
-        'rt'                  => parse_null($get('rt')),
-        'rw'                  => parse_null($get('rw')),
-        'kode_kelurahan'      => parse_null($get('kode_kelurahan')),
-        'kode_kecamatan'      => parse_null($get('kode_kecamatan')),
-        'kode_kabupaten_kota' => parse_null($get('kode_kabupaten_kota')),
-        'kode_pos'            => parse_null($get('kode_pos')),
-        'kode_provinsi'       => parse_null($get('kode_provinsi')),
-        'alamat_domisili'     => parse_null($get('alamat_domisili')),
-        'rt_domisili'         => parse_null($get('rt_domisili')),
-        'rw_domisili'         => parse_null($get('rw_domisili')),
+        'nama'                    => parse_null($get('nama')),
+        'no_rm'                   => parse_null($get('no_rm')),
+        'nik'                     => parse_null($get('nik')),
+        'no_asuransi_lain'        => parse_null($get('no_identitas_lain')),
+        'tempat_lahir'            => parse_null($get('tempat_lahir')),
+        'tanggal_lahir'           => parse_dt($get('tanggal_lahir')),
+        'jenis_kelamin'           => parse_int($get('jenis_kelamin')),
+        'agama'                   => parse_null($get('agama')),
+        'alamat'                  => parse_null($get('alamat')),
+        'rt'                      => parse_null($get('rt')),
+        'rw'                      => parse_null($get('rw')),
+        'kode_kelurahan'          => parse_null($get('kode_kelurahan')),
+        'kode_kecamatan'          => parse_null($get('kode_kecamatan')),
+        'kode_kabupaten_kota'     => parse_null($get('kode_kabupaten_kota')),
+        'kode_pos'                => parse_null($get('kode_pos')),
+        'kode_provinsi'           => parse_null($get('kode_provinsi')),
+        'alamat_domisili'         => parse_null($get('alamat_domisili')),
+        'rt_domisili'             => parse_null($get('rt_domisili')),
+        'rw_domisili'             => parse_null($get('rw_domisili')),
         'kode_kelurahan_domisili' => parse_null($get('kode_kelurahan_dom')),
         'kode_kecamatan_domisili' => parse_null($get('kode_kecamatan_dom')),
         'kode_kabupaten_domisili' => parse_null($get('kode_kabupaten_dom')),
-        'kode_pos_domisili'   => parse_null($get('kode_pos_dom')),
+        'kode_pos_domisili'       => parse_null($get('kode_pos_dom')),
         'kode_provinsi_domisili'  => parse_null($get('kode_provinsi_dom')),
-        'no_telepon'          => parse_null($get('no_telepon')),
+        'no_telepon'              => parse_null($get('no_telepon')),
         'no_telepon_alternatif'   => parse_null($get('no_telepon_alt')),
-        'pendidikan'          => parse_null($get('pendidikan')),
-        'pekerjaan'           => parse_null($get('pekerjaan')),
-        'status_perkawinan'   => parse_int($get('status_perkawinan')),
-        'status_kepesertaan'  => parse_null($get('status_kepesertaan')),
+        'pendidikan'              => parse_null($get('pendidikan')),
+        'pekerjaan'               => parse_null($get('pekerjaan')),
+        'status_perkawinan'       => parse_int($get('status_perkawinan')),
+        'status_kepesertaan'      => parse_null($get('status_kepesertaan')),
         
-        // ANTROPOMETRI (Dibatasi ketat agar aman dari truncation)
-        'tinggi_badan'        => $safeStr('tinggi_badan', 20),
-        'berat_badan'         => $safeStr('berat_badan', 20),
+        // ANTROPOMETRI
+        'tinggi_badan'            => $safeStr($get('tinggi_badan'), 20),
+        'berat_badan'             => $safeStr($get('berat_badan'), 20),
 
         // KUNJUNGAN
-        'tanggal_kunjungan'   => parse_dt($get('tanggal_kunjungan')),
-        'jam_kunjungan'       => parse_jam($get('jam_kunjungan')),
+        'tanggal_kunjungan'       => parse_dt($get('tanggal_kunjungan')),
+        'jam_kunjungan'           => parse_jam($get('jam_kunjungan')),
 
-        // PEMERIKSAAN
-        'kesadaran'           => $safeStr('kesadaran', 95),
-        'nadi'                => $safeStr('nadi', 30),
-        'respiratory_rate'    => $safeStr('respiratory_rate', 30),
-        'tekanan_darah'       => $safeStr('tekanan_darah', 30),
-        'sistole'             => $safeStr('sistole', 20),
-        'diastole'            => $safeStr('diastole', 20),
-        'suhu'                => $safeStr('suhu', 30),
+        // PEMERIKSAAN (Dengan nilai aman & hasil ekstraksi cerdas)
+        'kesadaran'               => $safeStr($kesadaran, 80),
+        'nadi'                    => $safeStr($nadi, 20),
+        'respiratory_rate'        => $safeStr($rr, 20),
+        'tekanan_darah'           => $safeStr($td, 20),
+        'sistole'                 => $safeStr($sistole, 15),
+        'diastole'                => $safeStr($diastole, 15),
+        'suhu'                    => $safeStr($suhu, 20),
 
         // DIAGNOSIS
-        'diagnosis_raw'       => parse_null($get('diagnosis_akhir'))
-                                  ?: parse_null($get('diagnosis_awal')),
+        'diagnosis_raw'           => parse_null($get('diagnosis_akhir'))
+                                      ?: parse_null($get('diagnosis_awal')),
 
         // TINDAKAN
-        'nama_tindakan'       => parse_null($get('tindakan_nama')),
-        'nama_pelaksana'      => parse_null($get('tindakan_pelaksana')),
-        'tanggal_tindakan'    => parse_dt($get('tindakan_tanggal')),
-        'jam_tindakan'        => parse_jam($get('tindakan_jam')),
+        'nama_tindakan'           => parse_null($get('tindakan_nama')),
+        'nama_pelaksana'          => parse_null($get('tindakan_pelaksana')),
+        'tanggal_tindakan'        => parse_dt($get('tindakan_tanggal')),
+        'jam_tindakan'            => parse_jam($get('tindakan_jam')),
 
         // DOKTER
-        'dokter'              => parse_null($get('dokter_umum'))
-                                  ?: parse_null($get('dokter_tindakan'))
-                                  ?: parse_null($get('resep_dokter')),
+        'dokter'                  => parse_null($get('dokter_umum'))
+                                      ?: parse_null($get('dokter_tindakan'))
+                                      ?: parse_null($get('resep_dokter')),
 
-        'lab_hasil_raw'       => null,
+        'lab_hasil_raw'           => null,
 
-        // RESEP (Sanitasi ketat resep_jumlah dan resep_aturan)
-        'resep_nama_obat'     => parse_null($get('daftar_obat'))
-                                  ?: parse_null($get('resep_raw')),
-        'resep_jumlah'        => $safeStr('resep_jumlah', 20),
-        'resep_aturan'        => $safeStr('resep_aturan', 50),
-        'resep_dokter'        => parse_null($get('resep_dokter')),
-        'resep_tanggal'       => parse_dt($get('resep_tanggal')),
-        'resep_jam'           => parse_jam($get('resep_jam')),
+        // RESEP
+        'resep_nama_obat'         => parse_null($get('daftar_obat'))
+                                      ?: parse_null($get('resep_raw')),
+        'resep_jumlah'            => $safeStr($get('resep_jumlah'), 45),
+        'resep_aturan'            => $safeStr($get('resep_aturan'), 90),
+        'resep_dokter'            => parse_null($get('resep_dokter')),
+        'resep_tanggal'           => parse_dt($get('resep_tanggal')),
+        'resep_jam'               => parse_jam($get('resep_jam')),
 
-        '_raw'                => $v,
+        '_raw'                    => $v,
     ];
 }
 
