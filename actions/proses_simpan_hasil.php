@@ -238,11 +238,15 @@ try {
                 $stats['t_kunjungan']++;
             }
 
-            // ---- t_pemeriksaan ----
+            // ---- t_pemeriksaan (Diberikan pengaman string panjang maksimal) ----
             if ($kunjunganId && (!empty($r['tekanan_darah']) || !empty($r['suhu']) || !empty($r['nadi']))) {
                 $stmtCheck = $pdo->prepare("SELECT id FROM t_pemeriksaan WHERE kunjungan_id = :kid LIMIT 1");
                 $stmtCheck->execute([':kid' => $kunjunganId]);
                 if (!$stmtCheck->fetchColumn()) {
+                    
+                    $tdRaw = trim((string)($r['tekanan_darah'] ?? ''));
+                    if (strlen($tdRaw) > 25) $tdRaw = ''; // Pangkas jika data terlalu panjang / salah parsing
+
                     $pdo->prepare("INSERT INTO t_pemeriksaan
                         (kunjungan_id, kesadaran, nadi, respiratory_rate, tekanan_darah, sistole, diastole, suhu, tinggi_badan, berat_badan)
                         VALUES (:kid, :kes, :nadi, :rr, :td, :sis, :dias, :suhu, :tb, :bb)")
@@ -251,7 +255,7 @@ try {
                         ':kes'  => substr((string)($r['kesadaran'] ?? ''), 0, 90),
                         ':nadi' => substr((string)($r['nadi'] ?? ''), 0, 30),
                         ':rr'   => substr((string)($r['respiratory_rate'] ?? ''), 0, 30),
-                        ':td'   => substr((string)($r['tekanan_darah'] ?? ''), 0, 30),
+                        ':td'   => substr($tdRaw, 0, 30),
                         ':sis'  => substr((string)($r['sistole'] ?? ''), 0, 20),
                         ':dias' => substr((string)($r['diastole'] ?? ''), 0, 20),
                         ':suhu' => substr((string)($r['suhu'] ?? ''), 0, 30),
