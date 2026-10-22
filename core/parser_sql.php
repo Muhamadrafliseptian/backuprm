@@ -2,7 +2,7 @@
 /**
  * file   : core/parser_sql.php
  * path   : C:\xampp\htdocs\backuprm\core\parser_sql.php
- * fungsi : Parser SQL backup RME SIKDA — Presisi Indeks Kolom 244
+ * fungsi : Parser SQL backup RME SIKDA — Presisi Indeks Kolom 244 (PHP 8+ Safe)
  */
 declare(strict_types=1);
 
@@ -236,15 +236,18 @@ function sql_parse_row(string $raw): array
     $diastole  = parse_null($get('diastole'));
     $suhu      = parse_null($get('suhu'));
 
-    // Jika kolom suhu ternyata berisi string panjang/gabungan vital sign, parse otomatis dari teksnya
-    if (strpos((string)$vitalRaw, 'Suhu') !== false || strpos((string)$kesadaran, 'Nadi') !== false) {
-        // Fallback pencarian dari string gabungan jika indeks meleset
-        $combinedText = ($kesadaran ?? '') . ' ' . ($vitalRaw ?? '');
+    // Konversi aman ke string agar kompatibel dengan PHP 8+ (mencegah TypeError pada stripos)
+    $vitalRawStr  = (string)($vitalRaw ?? '');
+    $kesadaranStr = (string)($kesadaran ?? '');
+
+    // Jika kolom vital_sign_raw/kesadaran berisi string gabungan, parse otomatis dari teksnya
+    if (stripos($vitalRawStr, 'Suhu') !== false || stripos($kesadaranStr, 'Nadi') !== false) {
+        $combinedText = $kesadaranStr . ' ' . $vitalRawStr;
         if (preg_match('/Nadi\s*([0-9.]+)/i', $combinedText, $m)) $nadi = $m[1];
         if (preg_match('/RR\s*([0-9.]+)/i', $combinedText, $m)) $rr = $m[1];
         if (preg_match('/TD\s*([0-9\/]+)/i', $combinedText, $m)) $td = $m[1];
         if (preg_match('/Suhu\s*([0-9.]+)/i', $combinedText, $m)) $suhu = $m[1];
-        if (stripos($kesadaran, 'Compos Mentis') !== false) {
+        if (stripos($kesadaranStr, 'Compos Mentis') !== false) {
             $kesadaran = 'Compos Mentis';
         }
     }
@@ -295,7 +298,7 @@ function sql_parse_row(string $raw): array
         'tanggal_kunjungan'       => parse_dt($get('tanggal_kunjungan')),
         'jam_kunjungan'           => parse_jam($get('jam_kunjungan')),
 
-        // PEMERIKSAAN (Dengan nilai aman & hasil ekstraksi cerdas)
+        // PEMERIKSAAN
         'kesadaran'               => $safeStr($kesadaran, 80),
         'nadi'                    => $safeStr($nadi, 20),
         'respiratory_rate'        => $safeStr($rr, 20),
