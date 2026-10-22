@@ -1,7 +1,7 @@
 <?php
 /**
  * file   : actions/simpan-hasil.php
- * fungsi : Menyimpan data s_backup_raw ke tabel relasional secara bertahap (Fully Sanitized & Safe String Lengths)
+ * fungsi : Menyimpan data s_backup_raw ke tabel relasional secara bertahap (Fully Sanitized & Safe Lengths for ALL fields)
  */
 declare(strict_types=1);
 
@@ -14,6 +14,14 @@ ini_set('memory_limit', '1024M');
 if (!auth_check()) {
     json_response(['ok' => false, 'msg' => 'Unauthorized'], 401);
 }
+
+// Helper universal untuk membatasi panjang string secara aman
+$safe_str = function($val, int $maxLen): ?string {
+    if ($val === null) return null;
+    $str = trim((string)$val);
+    if ($str === '' || strcasecmp($str, 'null') === 0) return null;
+    return mb_substr($str, 0, $maxLen, 'UTF-8');
+};
 
 $lastId  = (int)($_POST['last_id'] ?? 0);
 $batchId = trim($_POST['batch_id'] ?? '');
@@ -129,7 +137,7 @@ try {
     $processedKunjunganChunk = [];
 
     foreach ($parsedRows as $r) {
-        // --- m_pasien (Safe Lengths) ---
+        // --- m_pasien ---
         $noRm = $r['no_rm'] ?? null;
         $pasienId = null;
 
@@ -138,36 +146,36 @@ try {
                 $pasienId = $pasienMap[$noRm];
             } else {
                 $stmtInsPasien->execute([
-                    ':no_rm'      => substr((string)$noRm, 0, 45),
-                    ':nik'        => substr((string)($r['nik'] ?? ''), 0, 25),
-                    ':asuransi'   => substr((string)($r['no_asuransi_lain'] ?? ''), 0, 45),
-                    ':nama'       => substr((string)($r['nama'] ?? '-'), 0, 140),
-                    ':tempat'     => substr((string)($r['tempat_lahir'] ?? ''), 0, 90),
+                    ':no_rm'      => $safe_str($noRm, 45),
+                    ':nik'        => $safe_str($r['nik'] ?? '', 25),
+                    ':asuransi'   => $safe_str($r['no_asuransi_lain'] ?? '', 45),
+                    ':nama'       => $safe_str($r['nama'] ?? '-', 140),
+                    ':tempat'     => $safe_str($r['tempat_lahir'] ?? '', 90),
                     ':tgl_lahir'  => $r['tanggal_lahir'] ?? null,
-                    ':jk'         => substr((string)($r['jenis_kelamin'] ?? ''), 0, 20),
-                    ':kawin'      => substr((string)($r['status_perkawinan'] ?? ''), 0, 30),
-                    ':pendidikan' => substr((string)($r['pendidikan'] ?? ''), 0, 45),
-                    ':pekerjaan'  => substr((string)($r['pekerjaan'] ?? ''), 0, 45),
-                    ':agama'      => substr((string)($r['agama'] ?? ''), 0, 30),
-                    ':alamat'     => substr((string)($r['alamat'] ?? ''), 0, 240),
-                    ':rt'         => substr((string)($r['rt'] ?? ''), 0, 8),
-                    ':rw'         => substr((string)($r['rw'] ?? ''), 0, 8),
-                    ':kel'        => substr((string)($r['kode_kelurahan'] ?? ''), 0, 18),
-                    ':kec'        => substr((string)($r['kode_kecamatan'] ?? ''), 0, 18),
-                    ':kab'        => substr((string)($r['kode_kabupaten_kota'] ?? ''), 0, 18),
-                    ':prov'       => substr((string)($r['kode_provinsi'] ?? ''), 0, 18),
-                    ':pos'        => substr((string)($r['kode_pos'] ?? ''), 0, 8),
-                    ':alamat_dom' => substr((string)($r['alamat_domisili'] ?? ''), 0, 240),
-                    ':rt_dom'     => substr((string)($r['rt_domisili'] ?? ''), 0, 8),
-                    ':rw_dom'     => substr((string)($r['rw_domisili'] ?? ''), 0, 8),
-                    ':kel_dom'    => substr((string)($r['kode_kelurahan_domisili'] ?? ''), 0, 18),
-                    ':kec_dom'    => substr((string)($r['kode_kecamatan_domisili'] ?? ''), 0, 18),
-                    ':kab_dom'    => substr((string)($r['kode_kabupaten_domisili'] ?? ''), 0, 18),
-                    ':prov_dom'   => substr((string)($r['kode_provinsi_domisili'] ?? ''), 0, 18),
-                    ':pos_dom'    => substr((string)($r['kode_pos_domisili'] ?? ''), 0, 8),
-                    ':telp'       => substr((string)($r['no_telepon'] ?? ''), 0, 45),
-                    ':telp_alt'   => substr((string)($r['no_telepon_alternatif'] ?? ''), 0, 45),
-                    ':peserta'    => substr((string)($r['status_kepesertaan'] ?? ''), 0, 45),
+                    ':jk'         => $safe_str($r['jenis_kelamin'] ?? '', 20),
+                    ':kawin'      => $safe_str($r['status_perkawinan'] ?? '', 30),
+                    ':pendidikan' => $safe_str($r['pendidikan'] ?? '', 45),
+                    ':pekerjaan'  => $safe_str($r['pekerjaan'] ?? '', 45),
+                    ':agama'      => $safe_str($r['agama'] ?? '', 30),
+                    ':alamat'     => $safe_str($r['alamat'] ?? '', 240),
+                    ':rt'         => $safe_str($r['rt'] ?? '', 8),
+                    ':rw'         => $safe_str($r['rw'] ?? '', 8),
+                    ':kel'        => $safe_str($r['kode_kelurahan'] ?? '', 18),
+                    ':kec'        => $safe_str($r['kode_kecamatan'] ?? '', 18),
+                    ':kab'        => $safe_str($r['kode_kabupaten_kota'] ?? '', 18),
+                    ':prov'       => $safe_str($r['kode_provinsi'] ?? '', 18),
+                    ':pos'        => $safe_str($r['kode_pos'] ?? '', 8),
+                    ':alamat_dom' => $safe_str($r['alamat_domisili'] ?? '', 240),
+                    ':rt_dom'     => $safe_str($r['rt_domisili'] ?? '', 8),
+                    ':rw_dom'     => $safe_str($r['rw_domisili'] ?? '', 8),
+                    ':kel_dom'    => $safe_str($r['kode_kelurahan_domisili'] ?? '', 18),
+                    ':kec_dom'    => $safe_str($r['kode_kecamatan_domisili'] ?? '', 18),
+                    ':kab_dom'    => $safe_str($r['kode_kabupaten_domisili'] ?? '', 18),
+                    ':prov_dom'   => $safe_str($r['kode_provinsi_domisili'] ?? '', 18),
+                    ':pos_dom'    => $safe_str($r['kode_pos_domisili'] ?? '', 8),
+                    ':telp'       => $safe_str($r['no_telepon'] ?? '', 45),
+                    ':telp_alt'   => $safe_str($r['no_telepon_alternatif'] ?? '', 45),
+                    ':peserta'    => $safe_str($r['status_kepesertaan'] ?? '', 45),
                 ]);
                 $pasienId = (int)$pdo->lastInsertId();
                 if (!$pasienId) {
@@ -182,12 +190,12 @@ try {
             }
         }
 
-        $getTenagaId = function($namaDokter) use ($pdo, &$tenagaMap, $stmtInsTenaga, &$stats) {
+        $getTenagaId = function($namaDokter) use ($pdo, &$tenagaMap, $stmtInsTenaga, &$stats, $safe_str) {
             $namaDokter = trim((string)$namaDokter);
             if ($namaDokter === '' || strcasecmp($namaDokter, '-') === 0) return null;
             if (isset($tenagaMap[$namaDokter])) return $tenagaMap[$namaDokter];
 
-            $stmtInsTenaga->execute([':n' => substr($namaDokter, 0, 140)]);
+            $stmtInsTenaga->execute([':n' => $safe_str($namaDokter, 140)]);
             $stmt = $pdo->prepare("SELECT id FROM m_tenaga_kesehatan WHERE nama = :n LIMIT 1");
             $stmt->execute([':n' => $namaDokter]);
             $tid = (int)$stmt->fetchColumn();
@@ -203,19 +211,19 @@ try {
             $getTenagaId($r['dokter']);
         }
 
-        // --- t_kunjungan (Safe Lengths) ---
+        // --- t_kunjungan ---
         $kunjunganId = null;
         if (!empty($r['no_transaksi']) && $pasienId) {
             $noTransaksi = (string)$r['no_transaksi'];
 
             $stmtInsKunjungan->execute([
                 ':pid'     => $pasienId,
-                ':nt'      => substr($noTransaksi, 0, 90),
+                ':nt'      => $safe_str($noTransaksi, 90),
                 ':tgl'     => $r['tanggal_kunjungan'] ?? null,
                 ':jam'     => $r['jam_kunjungan'] ?? null,
-                ':sumber'  => substr((string)($r['sumber_data'] ?? ''), 0, 45),
+                ':sumber'  => $safe_str($r['sumber_data'] ?? '', 45),
                 ':tgl_bck' => $r['tanggal_backup'] ?? null,
-                ':petugas' => substr((string)($r['petugas_input'] ?? ''), 0, 90),
+                ':petugas' => $safe_str($r['petugas_input'] ?? '', 90),
             ]);
             
             $stmtK = $pdo->prepare("SELECT id FROM t_kunjungan WHERE no_transaksi = :nt LIMIT 1");
@@ -227,8 +235,8 @@ try {
                 $stats['t_kunjungan']++;
             }
 
-            // ---- t_pemeriksaan (Strictly Filtered & Sanitized) ----
-            if ($kunjunganId && (!empty($r['tekanan_darah']) || !empty($r['suhu']) || !empty($r['nadi']))) {
+            // ---- t_pemeriksaan (100% Fully Safe & Strict) ----
+            if ($kunjunganId && (!empty($r['tekanan_darah']) || !empty($r['suhu']) || !empty($r['nadi']) || !empty($r['sistole']) || !empty($r['diastole']))) {
                 $stmtCheck = $pdo->prepare("SELECT id FROM t_pemeriksaan WHERE kunjungan_id = :kid LIMIT 1");
                 $stmtCheck->execute([':kid' => $kunjunganId]);
                 if (!$stmtCheck->fetchColumn()) {
@@ -236,37 +244,28 @@ try {
                     $tdRaw   = trim((string)($r['tekanan_darah'] ?? ''));
                     if (strlen($tdRaw) > 20) $tdRaw = '';
 
-                    $suhuRaw = trim((string)($r['suhu'] ?? ''));
-                    if (strlen($suhuRaw) > 15) $suhuRaw = '';
-
-                    $nadiRaw = trim((string)($r['nadi'] ?? ''));
-                    if (strlen($nadiRaw) > 15) $nadiRaw = '';
-
-                    $rrRaw   = trim((string)($r['respiratory_rate'] ?? ''));
-                    if (strlen($rrRaw) > 15) $rrRaw = '';
-
                     $pdo->prepare("INSERT INTO t_pemeriksaan
                         (kunjungan_id, kesadaran, nadi, respiratory_rate, tekanan_darah, sistole, diastole, suhu, tinggi_badan, berat_badan)
                         VALUES (:kid, :kes, :nadi, :rr, :td, :sis, :dias, :suhu, :tb, :bb)")
                     ->execute([
                         ':kid'  => $kunjunganId,
-                        ':kes'  => substr((string)($r['kesadaran'] ?? ''), 0, 80),
-                        ':nadi' => substr($nadiRaw, 0, 20),
-                        ':rr'   => substr($rrRaw, 0, 20),
-                        ':td'   => substr($tdRaw, 0, 20),
-                        ':sis'  => substr((string)($r['sistole'] ?? ''), 0, 15),
-                        ':dias' => substr((string)($r['diastole'] ?? ''), 0, 15),
-                        ':suhu' => substr($suhuRaw, 0, 20),
-                        ':tb'   => substr((string)($r['tinggi_badan'] ?? ''), 0, 20),
-                        ':bb'   => substr((string)($r['berat_badan'] ?? ''), 0, 20),
+                        ':kes'  => $safe_str($r['kesadaran'] ?? '', 80),
+                        ':nadi' => $safe_str($r['nadi'] ?? '', 20),
+                        ':rr'   => $safe_str($r['respiratory_rate'] ?? '', 20),
+                        ':td'   => $safe_str($tdRaw, 20),
+                        ':sis'  => $safe_str($r['sistole'] ?? '', 15),
+                        ':dias' => $safe_str($r['diastole'] ?? '', 15),
+                        ':suhu' => $safe_str($r['suhu'] ?? '', 20),
+                        ':tb'   => $safe_str($r['tinggi_badan'] ?? '', 20),
+                        ':bb'   => $safe_str($r['berat_badan'] ?? '', 20),
                     ]);
                     $stats['t_pemeriksaan']++;
                 }
             }
 
-            // ---- t_diagnosis (Safe Lengths) ----
+            // ---- t_diagnosis ----
             if ($kunjunganId && !empty($r['diagnosis_raw'])) {
-                $diagClean = substr((string)$r['diagnosis_raw'], 0, 240);
+                $diagClean = $safe_str($r['diagnosis_raw'], 240);
                 $stmtCheckDiag = $pdo->prepare("SELECT id FROM t_diagnosis WHERE kunjungan_id = :kid AND nama_diagnosis = :diag LIMIT 1");
                 $stmtCheckDiag->execute([':kid' => $kunjunganId, ':diag' => $diagClean]);
                 if (!$stmtCheckDiag->fetchColumn()) {
@@ -276,7 +275,7 @@ try {
                 }
             }
 
-            // ---- t_laboratorium (Safe Lengths) ----
+            // ---- t_laboratorium ----
             if ($kunjunganId && !empty($r['lab_hasil_raw'])) {
                 $stmtCheckLab = $pdo->prepare("SELECT id FROM t_laboratorium WHERE kunjungan_id = :kid LIMIT 1");
                 $stmtCheckLab->execute([':kid' => $kunjunganId]);
@@ -291,23 +290,23 @@ try {
                 }
             }
 
-            // ---- t_tindakan (Safe Lengths) ----
+            // ---- t_tindakan ----
             if ($kunjunganId && !empty($r['nama_tindakan'])) {
                 $nakesId = $getTenagaId($r['nama_pelaksana']);
                 $pdo->prepare("INSERT INTO t_tindakan (kunjungan_id, nama_tindakan, tenaga_kesehatan_id, tanggal_tindakan) VALUES (:kid, :nama, :nakes, :tgl)")
                     ->execute([
                         ':kid'   => $kunjunganId,
-                        ':nama'  => substr((string)$r['nama_tindakan'], 0, 240),
+                        ':nama'  => $safe_str($r['nama_tindakan'], 240),
                         ':nakes' => $nakesId,
                         ':tgl'   => $r['tanggal_tindakan'] ?? $r['tanggal_kunjungan'] ?? date('Y-m-d'),
                     ]);
                 $stats['t_tindakan']++;
             }
 
-            // ---- t_resep & m_obat (Safe Lengths) ----
+            // ---- t_resep & m_obat ----
             if ($kunjunganId && !empty($r['resep_nama_obat'])) {
-                $namaObat = substr(trim((string)$r['resep_nama_obat']), 0, 140);
-                if ($namaObat !== '') {
+                $namaObat = $safe_str($r['resep_nama_obat'], 140);
+                if ($namaObat !== null && $namaObat !== '') {
                     $stmtCekObat = $pdo->prepare("SELECT id FROM m_obat WHERE nama_obat = :nama LIMIT 1");
                     $stmtCekObat->execute([':nama' => $namaObat]);
                     $obatId = (int)$stmtCekObat->fetchColumn();
@@ -334,8 +333,8 @@ try {
                             ->execute([
                                 ':rid'    => $resepId,
                                 ':oid'    => $obatId,
-                                ':jml'    => substr((string)($r['resep_jumlah'] ?? '1'), 0, 45),
-                                ':aturan' => substr((string)($r['resep_aturan'] ?? '-'), 0, 90),
+                                ':jml'    => $safe_str($r['resep_jumlah'] ?? '1', 45),
+                                ':aturan' => $safe_str($r['resep_aturan'] ?? '-', 90),
                             ]);
                         $stats['d_resep_detail']++;
                     }
