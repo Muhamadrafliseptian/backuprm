@@ -1,30 +1,38 @@
 <?php
 /**
- * file   : internal_guard.php
- * path   : bootstrap/internal_guard.php
- * fungsi : Cegah file internal (pages/, core/, config/, actions/proses_*)
- *          diakses langsung lewat HTTP tanpa melalui router.
- *
- * KENAPA DIperlukan:
- *   Server produksi memakai nginx yang tidak bisa .htaccess. Tanpa proteksi
- *   di web server, file seperti /pages/login.php atau /.env akan dilayani
- *   langsung dari disk. File ini dipakai sebagai pagar lapis aplikasi.
- *
- * CARA KERJA:
- *   Setiap file internal diawali:
- *       require_once __DIR__ . '/../bootstrap/internal_guard.php';
- *   Guard ini menolak request yang tidak datang dari pipeline aplikasi.
- *   Yang dianggap sah hanya jika index.php sudah mendefinisikan APP_INTERNAL_OK
- *   sebelum memuat file-file internal.
- *
- * PERINGATAN: ini defense-in-depth. Tetap WAJIB pasang rule di web server
- *   (nginx location / Apache .htaccess) sebagai pagar pertama, sebelum PHP
- *   sempat berjalan.
+ * file   : bootstrap/internal_guard.php
  */
 declare(strict_types=1);
-require_once __DIR__ . '/../core/hash_helper.php';
+
+// Pastikan sesi aktif jika belum
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+/**
+ * DEKLARASI GLOBAL FIX: Mencegah error Call to undefined function hash_file_sha256()
+ */
+if (!function_exists('hash_file_sha256')) {
+    function hash_file_sha256(string $filePath): ?string
+    {
+        if (!file_exists($filePath) || !is_readable($filePath)) {
+            return null;
+        }
+        $hash = hash_file('sha256', $filePath);
+        return $hash !== false ? $hash : null;
+    }
+}
+
+if (!function_exists('hash_string_sha256')) {
+    function hash_string_sha256(string $content): string
+    {
+        return hash('sha256', $content);
+    }
+}
+
+// Lanjutkan guard standar aplikasi
 if (PHP_SAPI === 'cli') {
-    return; // boleh saat dijalankan dari CLI (tools/, generator)
+    return; 
 }
 
 if (!defined('APP_INTERNAL_OK')) {
